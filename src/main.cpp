@@ -1,7 +1,7 @@
-#include <iostream>
 #include <mpi.h>
 #include "densematgen.h"
 #include "parser.h"
+#include "matrixmul.h"
 
 
 int main(int argc, char **argv) {
@@ -29,11 +29,7 @@ int main(int argc, char **argv) {
             MPI_Finalize();
             return 2;
         }
-        std::cout << matrix->n << std::endl;
-        for (double i : matrix->nonzero_values) {
-            std::cout << i << " ";
-        }
-        std::cout << std::endl;
+        std::cout << *matrix;
     }
 
     MPI_Finalize();
