@@ -60,32 +60,42 @@ MatrixCRS* parse_sparse_matrix(const std::string &filename) {
 
     std::ifstream f;
     f.open(filename);
+    if (f.fail()) {
+        throw std::system_error(errno, std::system_category());
+    }
 
     try {
-        f >> rows >> columns >> total_items >> max_row_items;
-
+        if (!(f >> rows >> columns >> total_items >> max_row_items)) {
+            throw std::runtime_error("Invalid first line - couldn't parse 4 numbers as ints.");
+        }
         if (rows != columns) {
-            throw std::invalid_argument("Matrix hasn't square dimensions.");
+            throw std::runtime_error("Matrix hasn't square dimensions.");
         }
         if (total_items < 0) {
-            throw std::invalid_argument("Matrix total number of non-zero items is negative.");
+            throw std::runtime_error("Matrix total number of non-zero items is negative.");
         }
         if (max_row_items < 0) {
-            throw std::invalid_argument("Matrix number of max row items is negative.");
+            throw std::runtime_error("Matrix number of max row items is negative.");
         }
-
+        // Parse Matrix values.
         double value;
         for (int i = 0; i < total_items; i++) {
-            f >> value;
+            if (!(f >> value)) {
+                throw std::runtime_error("Invalid second line - couldn't parse one of the values as double.");
+            }
             nonzero_values.push_back(value);
         }
         int item;
         for (int i = 0; i <= total_items; i += max_row_items) {
-            f >> item;
+            if (!(f >> item)) {
+                throw std::runtime_error("Invalid third line - couldn't parse one of the values as int.");
+            }
             extents_of_rows.push_back(item);
         }
         for (int i = 0; i < total_items; i++) {
-            f >> item;
+            if (!(f >> item)) {
+                throw std::runtime_error("Invalid fourth line - couldn't parse one of the values as int.");
+            }
             column_indices.push_back(item);
         }
     } catch (std::exception &e) {
