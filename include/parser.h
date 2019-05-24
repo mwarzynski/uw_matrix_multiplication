@@ -17,7 +17,7 @@ public:
     int seed_for_dens_matrix = 0;
     Algorithms algorithm = COLA;
     bool print_the_matrix_c = false;
-    int replication_group_size = 0;
+    int replication_group_size = 1;
     int exponent = 0;
     int ge_value = 0;
     bool mkl = false;
