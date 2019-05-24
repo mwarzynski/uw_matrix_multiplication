@@ -1,4 +1,7 @@
-#include "parse.h"
+#include "parser.h"
+
+
+namespace parser {
 
 Arguments::Arguments(int argc, char **argv) {
     int c;
@@ -47,4 +50,51 @@ Arguments::Arguments(int argc, char **argv) {
     if (this->exponent <= 0) {
         throw std::invalid_argument("-e (exponent) is required and must be > 0.");
     }
+}
+
+MatrixCRS* parse_sparse_matrix(const std::string &filename) {
+    int rows, columns, total_items, max_row_items;
+    std::vector<double> nonzero_values;
+    std::vector<int> extents_of_rows;
+    std::vector<int> column_indices;
+
+    std::ifstream f;
+    f.open(filename);
+
+    try {
+        f >> rows >> columns >> total_items >> max_row_items;
+
+        if (rows != columns) {
+            throw std::invalid_argument("Matrix hasn't square dimensions.");
+        }
+        if (total_items < 0) {
+            throw std::invalid_argument("Matrix total number of non-zero items is negative.");
+        }
+        if (max_row_items < 0) {
+            throw std::invalid_argument("Matrix number of max row items is negative.");
+        }
+
+        double value;
+        for (int i = 0; i < total_items; i++) {
+            f >> value;
+            nonzero_values.push_back(value);
+        }
+        int item;
+        for (int i = 0; i <= total_items; i += max_row_items) {
+            f >> item;
+            extents_of_rows.push_back(item);
+        }
+        for (int i = 0; i < total_items; i++) {
+            f >> item;
+            column_indices.push_back(item);
+        }
+    } catch (std::exception &e) {
+        f.close();
+        std::rethrow_exception(std::current_exception());
+    }
+    f.close();
+    return new MatrixCRS(rows, std::move(nonzero_values), std::move(extents_of_rows),
+        std::move(column_indices));
+}
+
 }

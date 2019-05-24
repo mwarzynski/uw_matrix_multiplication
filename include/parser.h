@@ -1,15 +1,14 @@
-#ifndef UW_MATRIX_MULTIPLICATION_PARSE_H
-#define UW_MATRIX_MULTIPLICATION_PARSE_H
+#ifndef UW_MATRIX_MULTIPLICATION_PARSER_H
+#define UW_MATRIX_MULTIPLICATION_PARSER_H
 
+#include <fstream>
 #include <string>
 #include <stdexcept>
 #include <getopt.h>
+#include "matrixmul.h"
 
 
-enum Algorithms {
-    COLA,   // 1.5D blocked column replicating A (ColA)
-    COLABC, // 1.5D blocked column replicating all matrices (ColABC)
-};
+namespace parser {
 
 class Arguments {
 public:
@@ -26,4 +25,8 @@ public:
     Arguments(int argc, char **argv);
 };
 
-#endif //UW_MATRIX_MULTIPLICATION_PARSE_H
+MatrixCRS* parse_sparse_matrix(const std::string &filename);
+
+}
+
+#endif //UW_MATRIX_MULTIPLICATION_PARSER_H
