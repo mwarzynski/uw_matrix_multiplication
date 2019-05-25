@@ -27,7 +27,7 @@ Arguments::Arguments(int argc, char **argv) {
                 this->print_the_matrix_c = true;
                 break;
             case 'i':
-                this->algorithm = COLABC;
+                this->algorithm = matrixmul::COLABC;
                 break;
             case 'm':
                 this->mkl = true;
@@ -52,7 +52,7 @@ Arguments::Arguments(int argc, char **argv) {
     }
 }
 
-matrix::Sparse* parse_sparse_matrix(const std::string &filename) {
+std::unique_ptr<matrix::Sparse> parse_sparse_matrix(const std::string &filename) {
     int rows, columns, total_items, max_row_items;
     std::vector<double> nonzero_values;
     std::vector<int> extents_of_rows;
@@ -103,7 +103,7 @@ matrix::Sparse* parse_sparse_matrix(const std::string &filename) {
         std::rethrow_exception(std::current_exception());
     }
     f.close();
-    return new matrix::Sparse(rows, std::move(nonzero_values), std::move(extents_of_rows),
+    return std::make_unique<matrix::Sparse>(rows, std::move(nonzero_values), std::move(extents_of_rows),
         std::move(column_indices));
 }
 

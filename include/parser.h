@@ -1,6 +1,7 @@
 #ifndef UW_MATRIX_MULTIPLICATION_PARSER_H
 #define UW_MATRIX_MULTIPLICATION_PARSER_H
 
+#include <memory>
 #include <fstream>
 #include <string>
 #include <stdexcept>
@@ -15,7 +16,7 @@ public:
 
     std::string sparse_matrix_file;
     int seed = 0;
-    Algorithms algorithm = COLA;
+    matrixmul::Algorithms algorithm = matrixmul::COLA;
     bool print_the_matrix_c = false;
     int replication_group_size = 1;
     int exponent = 0;
@@ -25,7 +26,7 @@ public:
     Arguments(int argc, char **argv);
 };
 
-matrix::Sparse* parse_sparse_matrix(const std::string &filename);
+std::unique_ptr<matrix::Sparse> parse_sparse_matrix(const std::string &filename);
 
 }
 

@@ -1,8 +1,9 @@
 #include "matrixmul.h"
 
-AlgorithmCOLA::AlgorithmCOLA(matrix::Sparse *matrixA, messaging::Communicator *communicator, int seed)
-    : com{communicator} {
+namespace matrixmul {
 
+AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> matrixA, messaging::Communicator *communicator, int seed)
+    : com{communicator} {
     // Parse input Sparse Matrix.
     int matrixN;
     std::vector<matrix::Sparse> matrixA_splitted;
@@ -18,11 +19,17 @@ AlgorithmCOLA::AlgorithmCOLA(matrix::Sparse *matrixA, messaging::Communicator *c
     //  Using a generator we supply, processes generate the dense matrix B in parallel (our generator is stateless,
     //  so it might be used in parallel by multiple MPI processes; however, each element of the matrix must be
     //  generated exactly once).
-    auto matrixB = matrix::Dense(matrixN, com->rank(), com->numProcesses(), seed);
+    matrixB = std::make_unique<matrix::Dense>(matrixN, com->rank(), com->numProcesses(), seed);
 
     if (com->isCoordinator()) {
         for (const auto &m : matrixA_splitted) {
             std::cout << m << std::endl;
         }
     }
+}
+
+void AlgorithmCOLA::replicate() {}
+
+void AlgorithmCOLA::compute() {}
+
 }
