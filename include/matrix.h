@@ -19,6 +19,7 @@ public:
 
     Dense(int n, int part, int parts_total, int seed);
     Dense(int n, int part, int parts_total);
+    Dense() {};
 };
 
 std::ostream& operator<<(std::ostream &os, const Dense &m);
@@ -33,8 +34,9 @@ public:
 
     Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
                  std::vector<int> &&values_column);
+    Sparse() {};
 
-    std::vector<Sparse> Split(int p);
+    std::vector<Sparse> Split(int processes);
 };
 
 std::ostream& operator<<(std::ostream &os, const Sparse &m);

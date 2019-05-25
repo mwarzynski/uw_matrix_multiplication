@@ -10,23 +10,26 @@ void Algorithm::prepareMatrices(int seed) {
 void Algorithm::initializeCoordinator(int matrix_n, std::vector<matrix::Sparse> matricesA) {
     n = matrix_n;
     com->BroadcastN(n);
-    for (size_t i = 0; i < matricesA.size(); i++) {
-        // Send matricesA[i] to corresponding worker.
+    matrixA = std::make_unique<matrix::Sparse>(matricesA[0]);
+    for (size_t i = 1; i < matricesA.size(); i++) {
+        com->SendSparse(&matricesA[i], i, TAG_INITIALIZATION);
     }
 }
 
 void Algorithm::initializeWorker() {
     n = com->ReceiveN();
+    matrixA = com->ReceiveSparse(messaging::Communicator::rankCoordinator(), TAG_INITIALIZATION);
 }
 
-AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> matrixA, messaging::Communicator *communicator, int seed) {
+AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *communicator, int seed) {
     com = communicator;
     if (com->isCoordinator()) {
-        initializeCoordinator(matrixA->n, matrixA->Split(com->numProcesses()));
+        initializeCoordinator(full_matrix->n, full_matrix->Split(com->numProcesses()));
     } else {
         initializeWorker();
     }
     prepareMatrices(seed);
+    std::cout << *matrixA << std::endl;
 }
 
 void AlgorithmCOLA::phase_replication() {}

@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
             algorithm = std::make_unique<matrixmul::AlgorithmCOLA>(std::move(matrix_sparse), &communicator, arg.seed);
             break;
         case matrixmul::Algorithms::COLABC:
-            algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>();
+            algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator, arg.seed);
             break;
     }
     algorithm->phase_replication();
