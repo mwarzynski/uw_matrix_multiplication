@@ -16,6 +16,10 @@ bool Communicator::isCoordinator() {
     return _rank == 0;
 }
 
+int Communicator::rankCoordinator() {
+    return 0;
+}
+
 int Communicator::rank() {
     return _rank;
 }

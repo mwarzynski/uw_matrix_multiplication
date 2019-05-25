@@ -15,6 +15,7 @@ public:
     ~Communicator();
 
     bool isCoordinator();
+    int rankCoordinator();
     int rank();
     int numProcesses();
 

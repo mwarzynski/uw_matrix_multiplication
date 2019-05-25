@@ -15,8 +15,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    int n;
-    MatrixSparse *matrix_sparse;
+    int matrixN;
+    matrix::Sparse *matrix_sparse;
     if (communicator.isCoordinator()) {
         try {
             matrix_sparse = parser::parse_sparse_matrix(arg->sparse_matrix_file);
@@ -24,10 +24,15 @@ int main(int argc, char **argv) {
             std::cerr << e.what() << std::endl;
             return 2;
         }
-        n = matrix_sparse->n;
+        matrixN = matrix_sparse->n;
+
+        auto ms = matrix_sparse->Split(3);
+        for (auto m : ms) {
+            std::cout << m << std::endl;
+        }
     }
 
-    communicator.BroadcastMatrixN(&n);
+    communicator.BroadcastMatrixN(&matrixN);
 
 
     // Algorithm:
@@ -35,8 +40,8 @@ int main(int argc, char **argv) {
     //  Using a generator we supply, processes generate the dense matrix B in parallel (our generator is stateless,
     //  so it might be used in parallel by multiple MPI processes; however, each element of the matrix must be
     //  generated exactly once).
-    auto matrix = MatrixDense(n, communicator.rank(), communicator.numProcesses(), arg->seed);
-    std::cout << matrix;
+    // auto matrix = MatrixDense(n, communicator.rank(), communicator.numProcesses(), arg->seed);
+    // std::cout << matrix;
 
     // 2. Process 0 loads the sparse matrix A from a CSR file (see bibliography for the description of the format) and
     //  then sends it to other processes. Each process should receive only a part of the matrix that it will store for

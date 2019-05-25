@@ -5,8 +5,9 @@
 #include <iostream>
 #include "densematgen.h"
 
+namespace matrix {
 
-class MatrixDense {
+class Dense {
 public:
     // MatrixDense contains a given number of full columns.
     int rows;           // Number of rows in the Matrix (=n).
@@ -15,23 +16,27 @@ public:
     int columns_total;  // Total number of columns in the Matrix.
     std::vector<double> values;
 
-    MatrixDense(int n, int part, int parts_total, int seed);
+    Dense(int n, int part, int parts_total, int seed);
 };
 
-std::ostream& operator<<(std::ostream &os, const MatrixDense &m);
+std::ostream& operator<<(std::ostream &os, const Dense &m);
 
-class MatrixSparse {
+class Sparse {
 public:
     int n;
 
-    std::vector<double> nonzero_values; // Values in the matrix.
-    std::vector<int> extents_of_rows;   // Separation of values to different rows.
-    std::vector<int> column_indices;    // Values' column indices.
+    std::vector<double> values;             // Values in the matrix.
+    std::vector<int> rows_number_of_values; // Separation of values to different rows.
+    std::vector<int> values_column;         // Values' column indices.
 
-    MatrixSparse(int n, std::vector<double> &&nonzero_values, std::vector<int> &&extents_of_rows,
-                 std::vector<int> &&column_indices);
+    Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
+                 std::vector<int> &&values_column);
+
+    std::vector<Sparse> Split(int p);
 };
 
-std::ostream& operator<<(std::ostream &os, const MatrixSparse &m);
+std::ostream& operator<<(std::ostream &os, const Sparse &m);
+
+}
 
 #endif //UW_MATRIX_MULTIPLICATION_MATRIX_H

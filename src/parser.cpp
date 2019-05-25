@@ -52,7 +52,7 @@ Arguments::Arguments(int argc, char **argv) {
     }
 }
 
-MatrixSparse* parse_sparse_matrix(const std::string &filename) {
+matrix::Sparse* parse_sparse_matrix(const std::string &filename) {
     int rows, columns, total_items, max_row_items;
     std::vector<double> nonzero_values;
     std::vector<int> extents_of_rows;
@@ -103,7 +103,7 @@ MatrixSparse* parse_sparse_matrix(const std::string &filename) {
         std::rethrow_exception(std::current_exception());
     }
     f.close();
-    return new MatrixSparse(rows, std::move(nonzero_values), std::move(extents_of_rows),
+    return new matrix::Sparse(rows, std::move(nonzero_values), std::move(extents_of_rows),
         std::move(column_indices));
 }
 

@@ -25,7 +25,7 @@ public:
     Arguments(int argc, char **argv);
 };
 
-MatrixSparse* parse_sparse_matrix(const std::string &filename);
+matrix::Sparse* parse_sparse_matrix(const std::string &filename);
 
 }
 
