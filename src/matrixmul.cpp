@@ -2,34 +2,35 @@
 
 namespace matrixmul {
 
-AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> matrixA, messaging::Communicator *communicator, int seed)
-    : com{communicator} {
-    // Parse input Sparse Matrix.
-    int matrixN;
-    std::vector<matrix::Sparse> matrixA_splitted;
-    if (com->isCoordinator()) {
-        matrixN = matrixA->n;
-        matrixA_splitted = matrixA->Split(com->numProcesses());
-    }
+void Algorithm::prepareMatrices(int seed) {
+    matrixB = std::make_unique<matrix::Dense>(n, com->rank(), com->numProcesses(), seed);
+    matrixC = std::make_unique<matrix::Dense>(n, com->rank(), com->numProcesses());
+}
 
-    com->BroadcastMatrixN(&matrixN);
-
-    // Algorithm:
-    // 1. Our implementation must start from a data distribution for c = 1 (i.e., as if there is no replication).
-    //  Using a generator we supply, processes generate the dense matrix B in parallel (our generator is stateless,
-    //  so it might be used in parallel by multiple MPI processes; however, each element of the matrix must be
-    //  generated exactly once).
-    matrixB = std::make_unique<matrix::Dense>(matrixN, com->rank(), com->numProcesses(), seed);
-
-    if (com->isCoordinator()) {
-        for (const auto &m : matrixA_splitted) {
-            std::cout << m << std::endl;
-        }
+void Algorithm::initializeCoordinator(int matrix_n, std::vector<matrix::Sparse> matricesA) {
+    n = matrix_n;
+    com->BroadcastN(n);
+    for (size_t i = 0; i < matricesA.size(); i++) {
+        // Send matricesA[i] to corresponding worker.
     }
 }
 
-void AlgorithmCOLA::replicate() {}
+void Algorithm::initializeWorker() {
+    n = com->ReceiveN();
+}
 
-void AlgorithmCOLA::compute() {}
+AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> matrixA, messaging::Communicator *communicator, int seed) {
+    com = communicator;
+    if (com->isCoordinator()) {
+        initializeCoordinator(matrixA->n, matrixA->Split(com->numProcesses()));
+    } else {
+        initializeWorker();
+    }
+    prepareMatrices(seed);
+}
+
+void AlgorithmCOLA::phase_replication() {}
+
+void AlgorithmCOLA::phase_computation() {}
 
 }

@@ -8,6 +8,7 @@
 // MKL - matrix multiplication of sparse and dense matrix.
 // https://software.intel.com/en-us/mkl-developer-reference-fortran-mkl-sparse-mm
 
+
 namespace matrixmul {
 
 enum Algorithms {
@@ -17,22 +18,36 @@ enum Algorithms {
 
 class Algorithm {
 public:
+    int n;
+    messaging::Communicator *com;
+    std::unique_ptr<matrix::Dense> matrixB;
+    std::unique_ptr<matrix::Dense> matrixC;
 
-    virtual void replicate() = 0;
-    virtual void compute() = 0;
+    virtual void phase_replication() = 0;
+    virtual void phase_computation() = 0;
+
+    void prepareMatrices(int seed);
+    void initializeWorker();
+    void initializeCoordinator(int n, std::vector<matrix::Sparse> matricesA);
 };
 
 class AlgorithmCOLA : public Algorithm {
 public:
     AlgorithmCOLA(std::unique_ptr<matrix::Sparse> matrixA, messaging::Communicator *communicator, int seed);
 
-    void replicate() override;
-    void compute() override;
+    void phase_replication() override;
+    void phase_computation() override;
 
 private:
-    std::unique_ptr<matrix::Dense> matrixB;
-    std::unique_ptr<matrix::Dense> matrixC;
-    messaging::Communicator *com;
+
+};
+
+class AlgorithmCOLABC : public Algorithm {
+public:
+    AlgorithmCOLABC() {};
+
+    void phase_replication() override {};
+    void phase_computation() override {};
 };
 
 }

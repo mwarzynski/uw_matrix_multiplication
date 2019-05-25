@@ -3,6 +3,7 @@
 
 #include "mpi.h"
 
+
 namespace messaging {
 
 class Communicator {
@@ -15,14 +16,14 @@ public:
     ~Communicator();
 
     bool isCoordinator();
-    int rankCoordinator();
+    static int rankCoordinator();
     int rank();
     int numProcesses();
 
-    void BroadcastMatrixN(int *n);
+    void BroadcastN(int n);
+    int ReceiveN();
 };
 
 }
-
 
 #endif //UW_MATRIX_MULTIPLICATION_COMMUNICATOR_H

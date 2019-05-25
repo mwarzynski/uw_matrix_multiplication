@@ -23,11 +23,11 @@ int main(int argc, char **argv) {
             algorithm = std::make_unique<matrixmul::AlgorithmCOLA>(std::move(matrix_sparse), &communicator, arg.seed);
             break;
         case matrixmul::Algorithms::COLABC:
-            throw std::runtime_error("COLABC is not implemented yet.");
+            algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>();
+            break;
     }
-
-    algorithm->replicate();
-    algorithm->compute();
+    algorithm->phase_replication();
+    algorithm->phase_computation();
 
     // 2. Process 0 loads the sparse matrix A from a CSR file (see bibliography for the description of the format) and
     //  then sends it to other processes. Each process should receive only a part of the matrix that it will store for

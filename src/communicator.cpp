@@ -13,7 +13,7 @@ Communicator::~Communicator() {
 }
 
 bool Communicator::isCoordinator() {
-    return _rank == 0;
+    return _rank == Communicator::rankCoordinator();
 }
 
 int Communicator::rankCoordinator() {
@@ -28,8 +28,14 @@ int Communicator::numProcesses() {
     return _num_processes;
 }
 
-void Communicator::BroadcastMatrixN(int *n) {
-    MPI_Bcast(n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+void Communicator::BroadcastN(int n) {
+    MPI_Bcast(&n, 1, MPI_INT, rankCoordinator(), MPI_COMM_WORLD);
+}
+
+int Communicator::ReceiveN() {
+    int n;
+    MPI_Bcast(&n, 1, MPI_INT, rankCoordinator(), MPI_COMM_WORLD);
+    return n;
 }
 
 }

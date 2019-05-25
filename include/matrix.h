@@ -5,6 +5,7 @@
 #include <iostream>
 #include "densematgen.h"
 
+
 namespace matrix {
 
 class Dense {
@@ -17,6 +18,7 @@ public:
     std::vector<double> values;
 
     Dense(int n, int part, int parts_total, int seed);
+    Dense(int n, int part, int parts_total);
 };
 
 std::ostream& operator<<(std::ostream &os, const Dense &m);
@@ -32,7 +34,7 @@ public:
     Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
                  std::vector<int> &&values_column);
 
-    const std::vector<Sparse> Split(int p);
+    std::vector<Sparse> Split(int p);
 };
 
 std::ostream& operator<<(std::ostream &os, const Sparse &m);

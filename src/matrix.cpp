@@ -28,6 +28,12 @@ Dense::Dense(int n, int part, int parts_total, int seed) : rows{n}, columns_tota
     }
 }
 
+Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
+    columns = block_column_size(n, parts_total);
+    column_base = block_column_base(n, &columns, part);
+    values.resize(columns * n);
+}
+
 std::ostream &operator<<(std::ostream &os, const Dense &m) {
     int i = 0;
     for (int r = 0; r < m.rows; r++) {
@@ -51,7 +57,7 @@ Sparse::Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_numb
                                                     rows_number_of_values{rows_number_of_values},
                                                     values_column{values_column} {}
 
-const std::vector<Sparse> Sparse::Split(int p) {
+std::vector<Sparse> Sparse::Split(int p) {
     std::vector<std::vector<double>> m_values(p);
     std::vector<int> m_last_row(p);
     std::vector<std::vector<int>> m_rows_values(p);
@@ -74,13 +80,12 @@ const std::vector<Sparse> Sparse::Split(int p) {
         }
     }
 
-    std::vector<Sparse> matrixes;
+    std::vector<Sparse> matrices;
     for (int i = 0; i < p; i++) {
         auto m = Sparse(n, std::move(m_values[i]), std::move(m_rows_values[i]), std::move(m_value_column[i]));
-        matrixes.push_back(m);
+        matrices.push_back(m);
     }
-
-    return matrixes;
+    return matrices;
 }
 
 std::ostream &operator<<(std::ostream &os, const Sparse &m) {
