@@ -14,7 +14,7 @@ class Arguments {
 public:
 
     std::string sparse_matrix_file;
-    int seed_for_dens_matrix = 0;
+    int seed = 0;
     Algorithms algorithm = COLA;
     bool print_the_matrix_c = false;
     int replication_group_size = 1;
@@ -25,7 +25,7 @@ public:
     Arguments(int argc, char **argv);
 };
 
-MatrixCRS* parse_sparse_matrix(const std::string &filename);
+MatrixSparse* parse_sparse_matrix(const std::string &filename);
 
 }
 

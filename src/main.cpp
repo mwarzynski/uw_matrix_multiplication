@@ -1,5 +1,4 @@
 #include <mpi.h>
-#include "densematgen.h"
 #include "parser.h"
 #include "matrixmul.h"
 
@@ -17,7 +16,7 @@ int main(int argc, char **argv) {
     } catch (std::exception &e) {
         std::cout << "Arguments: " << e.what() << std::endl;
         MPI_Finalize();
-        return 1;
+        return 2;
     }
 
     // Algorithm:
@@ -25,7 +24,9 @@ int main(int argc, char **argv) {
     //  Using a generator we supply, processes generate the dense matrix B in parallel (our generator is stateless,
     //  so it might be used in parallel by multiple MPI processes; however, each element of the matrix must be
     //  generated exactly once).
-    //
+    auto matrix = MatrixDense(10, rank, num_processes, arg->seed);
+    std::cout << matrix;
+
     // 2. Process 0 loads the sparse matrix A from a CSR file (see bibliography for the description of the format) and
     //  then sends it to other processes. Each process should receive only a part of the matrix that it will store for
     //  data distribution for c = 1 (the coordinator should not send redundant data).
@@ -33,8 +34,8 @@ int main(int argc, char **argv) {
     // Only after this initial data distribution, processes should contact their peers in replication groups and
     // exchange their parts of matrices.
     //
-    // Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)
-    // matrix multiplication. In a second version, use MKL for local matrix multiplication.
+    // 3. Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)
+    //  matrix multiplication. In a second version, use MKL for local matrix multiplication.
 
     MPI_Finalize();
     return 0;

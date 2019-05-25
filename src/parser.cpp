@@ -12,7 +12,7 @@ Arguments::Arguments(int argc, char **argv) {
                 this->sparse_matrix_file = std::string(optarg);
                 break;
             case 's':
-                this->seed_for_dens_matrix = std::strtol(optarg, &end, 10);
+                this->seed = std::strtol(optarg, &end, 10);
                 break;
             case 'c':
                 this->replication_group_size = std::strtol(optarg, &end, 10);
@@ -41,7 +41,7 @@ Arguments::Arguments(int argc, char **argv) {
     if (this->sparse_matrix_file.empty()) {
         throw std::invalid_argument("-f (sparse_matrix_file) is required.");
     }
-    if (this->seed_for_dens_matrix <= 0) {
+    if (this->seed <= 0) {
         throw std::invalid_argument("-s (seed_for_dense_matrix) is required and must be > 0.");
     }
     if (this->replication_group_size <= 0) {
@@ -52,7 +52,7 @@ Arguments::Arguments(int argc, char **argv) {
     }
 }
 
-MatrixCRS* parse_sparse_matrix(const std::string &filename) {
+MatrixSparse* parse_sparse_matrix(const std::string &filename) {
     int rows, columns, total_items, max_row_items;
     std::vector<double> nonzero_values;
     std::vector<int> extents_of_rows;
@@ -103,7 +103,7 @@ MatrixCRS* parse_sparse_matrix(const std::string &filename) {
         std::rethrow_exception(std::current_exception());
     }
     f.close();
-    return new MatrixCRS(rows, std::move(nonzero_values), std::move(extents_of_rows),
+    return new MatrixSparse(rows, std::move(nonzero_values), std::move(extents_of_rows),
         std::move(column_indices));
 }
 
