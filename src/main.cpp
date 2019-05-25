@@ -1,30 +1,41 @@
 #include <mpi.h>
 #include "parser.h"
-#include "matrixmul.h"
+#include "matrix.h"
+#include "communicator.h"
 
 
 int main(int argc, char **argv) {
-    MPI_Init(&argc, &argv);
-
-    int num_processes, rank;
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    auto communicator = messaging::Communicator(argc, argv);
 
     parser::Arguments *arg;
     try {
         arg = new parser::Arguments(argc, argv);
     } catch (std::exception &e) {
-        std::cout << "Arguments: " << e.what() << std::endl;
-        MPI_Finalize();
-        return 2;
+        std::cerr << "Arguments: " << e.what() << std::endl;
+        return 1;
     }
+
+    int n;
+    MatrixSparse *matrix_sparse;
+    if (communicator.isCoordinator()) {
+        try {
+            matrix_sparse = parser::parse_sparse_matrix(arg->sparse_matrix_file);
+        } catch (std::exception &e) {
+            std::cerr << e.what() << std::endl;
+            return 2;
+        }
+        n = matrix_sparse->n;
+    }
+
+    communicator.BroadcastMatrixN(&n);
+
 
     // Algorithm:
     // 1. Our implementation must start from a data distribution for c = 1 (i.e., as if there is no replication).
     //  Using a generator we supply, processes generate the dense matrix B in parallel (our generator is stateless,
     //  so it might be used in parallel by multiple MPI processes; however, each element of the matrix must be
     //  generated exactly once).
-    auto matrix = MatrixDense(10, rank, num_processes, arg->seed);
+    auto matrix = MatrixDense(n, communicator.rank(), communicator.numProcesses(), arg->seed);
     std::cout << matrix;
 
     // 2. Process 0 loads the sparse matrix A from a CSR file (see bibliography for the description of the format) and
@@ -37,6 +48,5 @@ int main(int argc, char **argv) {
     // 3. Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)
     //  matrix multiplication. In a second version, use MKL for local matrix multiplication.
 
-    MPI_Finalize();
     return 0;
 }
