@@ -51,7 +51,7 @@ Sparse::Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_numb
                                                     rows_number_of_values{rows_number_of_values},
                                                     values_column{values_column} {}
 
-std::vector<Sparse> Sparse::Split(int p) {
+const std::vector<Sparse> Sparse::Split(int p) {
     std::vector<std::vector<double>> m_values(p);
     std::vector<int> m_last_row(p);
     std::vector<std::vector<int>> m_rows_values(p);

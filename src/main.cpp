@@ -5,8 +5,10 @@
 
 
 int main(int argc, char **argv) {
+    // Initialize communication between processes.
     auto communicator = messaging::Communicator(argc, argv);
 
+    // Parse command line arguments.
     parser::Arguments *arg;
     try {
         arg = new parser::Arguments(argc, argv);
@@ -15,33 +17,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    int matrixN;
+    // Parse provided sparse Matrix from plaintext file.
     matrix::Sparse *matrix_sparse;
-    if (communicator.isCoordinator()) {
-        try {
-            matrix_sparse = parser::parse_sparse_matrix(arg->sparse_matrix_file);
-        } catch (std::exception &e) {
-            std::cerr << e.what() << std::endl;
-            return 2;
-        }
-        matrixN = matrix_sparse->n;
-
-        auto ms = matrix_sparse->Split(3);
-        for (auto m : ms) {
-            std::cout << m << std::endl;
-        }
+    try {
+        matrix_sparse = parser::parse_sparse_matrix(arg->sparse_matrix_file);
+    } catch (std::exception &e) {
+        std::cerr << "Parsing " << arg->sparse_matrix_file << ": " << e.what() << std::endl;
+        return 2;
     }
 
-    communicator.BroadcastMatrixN(&matrixN);
-
-
-    // Algorithm:
-    // 1. Our implementation must start from a data distribution for c = 1 (i.e., as if there is no replication).
-    //  Using a generator we supply, processes generate the dense matrix B in parallel (our generator is stateless,
-    //  so it might be used in parallel by multiple MPI processes; however, each element of the matrix must be
-    //  generated exactly once).
-    // auto matrix = MatrixDense(n, communicator.rank(), communicator.numProcesses(), arg->seed);
-    // std::cout << matrix;
+    // Run algorithm.
+    auto algorithm = AlgorithmCOLA(matrix_sparse, &communicator, arg->seed);
 
     // 2. Process 0 loads the sparse matrix A from a CSR file (see bibliography for the description of the format) and
     //  then sends it to other processes. Each process should receive only a part of the matrix that it will store for

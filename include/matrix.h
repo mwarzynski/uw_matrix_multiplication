@@ -32,7 +32,7 @@ public:
     Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
                  std::vector<int> &&values_column);
 
-    std::vector<Sparse> Split(int p);
+    const std::vector<Sparse> Split(int p);
 };
 
 std::ostream& operator<<(std::ostream &os, const Sparse &m);
