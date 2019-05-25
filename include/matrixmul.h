@@ -14,9 +14,10 @@ enum Algorithms {
 class MatrixDense {
 public:
     // MatrixDense contains a given number of full columns.
-    int rows;        // Number of rows in the Matrix (=n).
-    int column_base; // First column saved in the Matrix.
-    int columns;     // Number of columns saved in the Matrix.
+    int rows;           // Number of rows in the Matrix (=n).
+    int column_base;    // First column saved in the Matrix.
+    int columns;        // Number of columns saved in the Matrix.
+    int columns_total;  // Total number of columns in the Matrix.
     std::vector<double> values;
 
     MatrixDense(int n, int part, int parts_total, int seed);

@@ -1,11 +1,17 @@
 #include "matrixmul.h"
 
-MatrixDense::MatrixDense(int n, int part, int parts_total, int seed) : rows{n} {
-    this->columns = n / parts_total;
-    this->column_base = columns * part;
+MatrixDense::MatrixDense(int n, int part, int parts_total, int seed) : rows{n}, columns_total{n} {
+    columns = (n / parts_total);
+    if (n % parts_total != 0) {
+        columns++;
+    }
+    column_base = columns * part;
+    if (column_base + columns >= columns_total) {
+        columns = columns_total - column_base;
+    }
     for (int r = 0; r < n; r++) {
         for (int c = 0; c < columns; c++) {
-            this->values.push_back(generate_double(seed, r, column_base + c));
+            values.push_back(generate_double(seed, r, column_base + c));
         }
     }
 }
