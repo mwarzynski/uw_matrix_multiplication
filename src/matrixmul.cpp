@@ -36,4 +36,8 @@ void AlgorithmCOLA::phase_replication() {}
 
 void AlgorithmCOLA::phase_computation() {}
 
+void Algorithm::phase_final_ge() {}
+
+void Algorithm::phase_final_matrix() {}
+
 }

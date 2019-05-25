@@ -26,18 +26,23 @@ int main(int argc, char **argv) {
             algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator, arg.seed);
             break;
     }
+
+    // 2. After this initial data distribution, processes should contact their peers in replication groups and
+    // exchange their parts of matrices.
     algorithm->phase_replication();
+
+    // 3. Computation.
     algorithm->phase_computation();
 
-    // 2. Process 0 loads the sparse matrix A from a CSR file (see bibliography for the description of the format) and
-    //  then sends it to other processes. Each process should receive only a part of the matrix that it will store for
-    //  data distribution for c = 1 (the coordinator should not send redundant data).
-    //
-    // Only after this initial data distribution, processes should contact their peers in replication groups and
-    // exchange their parts of matrices.
-    //
-    // 3. Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)
-    //  matrix multiplication. In a second version, use MKL for local matrix multiplication.
+    // Final phase of gathering results from the workers.
+    if (arg.ge_value) {
+        algorithm->phase_final_ge();
+    } else if (arg.print_the_matrix_c) {
+        algorithm->phase_final_matrix();
+    }
+
+    // Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)
+    // matrix multiplication. In a second version, use MKL for local matrix multiplication.
 
     return 0;
 }

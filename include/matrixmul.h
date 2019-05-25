@@ -28,6 +28,9 @@ public:
     virtual void phase_replication() = 0;
     virtual void phase_computation() = 0;
 
+    void phase_final_matrix();
+    void phase_final_ge();
+
     void prepareMatrices(int seed);
     void initializeWorker();
     void initializeCoordinator(int n, std::vector<matrix::Sparse> matricesA);
@@ -39,9 +42,6 @@ public:
 
     void phase_replication() override;
     void phase_computation() override;
-
-private:
-
 };
 
 class AlgorithmCOLABC : public Algorithm {
