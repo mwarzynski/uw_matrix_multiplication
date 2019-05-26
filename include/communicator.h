@@ -12,12 +12,16 @@ namespace messaging {
 
 class Communicator {
 private:
+    MPI_Comm _comm;
     int _rank;
     int _num_processes;
 public:
 
     Communicator(int argc, char **argv);
+    Communicator(MPI_Comm base_comm, int base_rank, int divider);
     ~Communicator();
+
+    Communicator Split(int divider);
 
     bool isCoordinator();
     static int rankCoordinator();
