@@ -5,8 +5,6 @@
 #include "mpi.h"
 #include "matrix.h"
 
-#define PHASE_INITIALIZATION 10
-
 
 namespace messaging {
 

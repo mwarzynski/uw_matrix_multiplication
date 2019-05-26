@@ -21,6 +21,11 @@ public:
     Dense(int n, int part, int parts_total, int seed);
     Dense(int n, int part, int parts_total);
     Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values);
+
+    std::pair<int, int> ColumnRange();
+    double Get(int x, int y);
+    void Set(int x, int y, double value);
+    void ItemAdd(int x, int y, double value);
 };
 
 std::ostream& operator<<(std::ostream &os, const Dense &m);

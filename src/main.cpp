@@ -14,6 +14,9 @@ int main(int argc, char **argv) {
     std::unique_ptr<matrix::Sparse> matrix_sparse;
     if (communicator.isCoordinator()) {
         matrix_sparse = parser::parse_sparse_matrix(arg.sparse_matrix_file);
+        if (matrix_sparse->n % arg.replication_group_size != 0) {
+            throw std::invalid_argument("n % c != 0");
+        }
     }
 
     // Run algorithm.

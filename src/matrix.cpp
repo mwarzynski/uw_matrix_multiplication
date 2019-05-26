@@ -37,18 +37,35 @@ Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
 Dense::Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values) : rows{rows},
     column_base{column_base}, columns{columns}, columns_total{columns_total}, values{values} {}
 
+std::pair<int, int> Dense::ColumnRange() {
+    return std::make_pair(column_base, column_base + columns - 1);
+}
+
+double Dense::Get(int x, int y) {
+    int rx = x - column_base;
+    return values[columns*rx + y];
+}
+
+void Dense::Set(int x, int y, double value) {
+    int rx = x - column_base;
+    values[columns*rx + y] = value;
+}
+
+void Dense::ItemAdd(int x, int y, double value) {
+    auto v = Get(x, y);
+    Set(x, y, v + value);
+}
+
 std::ostream &operator<<(std::ostream &os, const Dense &m) {
     int i = 0;
     for (int r = 0; r < m.rows; r++) {
-        for (int c = 0; c < m.columns; c++) {
-            os << "(" << r << "," << m.column_base + c << ")=";
-            if (m.values[i] != 0) {
-                os << m.values[i];
+        for (int c = 0; c < m.columns_total; c++) {
+            if (m.column_base <= c && c < m.column_base + m.columns) {
+                os << m.values[i++];
             } else {
                 os << "0.000";
             }
             os << "\t";
-            i++;
         }
         os << std::endl;
     }
@@ -127,6 +144,9 @@ std::ostream &operator<<(std::ostream &os, const Sparse &m) {
     return os;
 }
 
+// sitCmp compares SparseIt iterators.
+// It returns True if value of the first one is before the second one.
+// Firstly compares X and Y. It also checks if iterator is EOF (value==0).
 bool sitCmp(std::tuple<int,int,double> a, std::tuple<int,int,double> b) {
     if (std::get<2>(a) == 0) {
         return false;
@@ -140,42 +160,45 @@ bool sitCmp(std::tuple<int,int,double> a, std::tuple<int,int,double> b) {
 }
 
 Sparse::Sparse(Sparse *a, Sparse *b) {
+    // Initialize iterators over 'a' and 'b'.
     auto ait = SparseIt(a);
     auto bit = SparseIt(b);
-
+    // Initialize values for the new Sparse matrix.
     n = a->n;
     int items = a->values.size() + b->values.size();
     values.resize(items);
     rows_number_of_values.push_back(0);
     values_column.resize(items);
-
+    // Initialize variables for the while loop.
+    // Iterator's values, row, column, last_row.
     int i = 0;
     ait.Next(); bit.Next();
     auto av = ait.Value();
     auto bv = bit.Value();
-    auto it = av;
+    std::tuple<int,int,double> v;
     int last_row = 0;
     int r, c;
 
     while (i < items) {
+        // Determine which value (if matrix 'a' or 'b') should be added first.
         if (sitCmp(av, bv)) {
-            it = av;
+            v = av;
             ait.Next();
         } else {
-            it = bv;
+            v = bv;
             bit.Next();
         }
-
-        r = std::get<0>(it); c = std::get<1>(it);
-        values[i] = std::get<double>(it);
+        // Add value to the new Matrix.
+        r = std::get<0>(v); c = std::get<1>(v);
+        values[i] = std::get<double>(v);
         values_column[i] = c;
         if (r > last_row) {
             for (int j = 0; j < (r - last_row); j++)
                 rows_number_of_values.push_back(i);
             last_row = r;
         }
+        // Update values.
         i++;
-
         av = ait.Value();
         bv = bit.Value();
     }
