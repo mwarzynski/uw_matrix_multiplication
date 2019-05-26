@@ -19,13 +19,14 @@ enum Algorithms {
 class Algorithm {
 public:
     int n;
-    messaging::Communicator *com;
+    int c;
+    messaging::Communicator *communicator;
 
     std::unique_ptr<matrix::Sparse> matrixA;
     std::unique_ptr<matrix::Dense> matrixB;
     std::unique_ptr<matrix::Dense> matrixC;
 
-    virtual void phase_replication() = 0;
+    void phase_replication();
     virtual void phase_computation() = 0;
 
     void phase_final_matrix();
@@ -38,9 +39,8 @@ public:
 
 class AlgorithmCOLA : public Algorithm {
 public:
-    AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *communicator, int seed);
+    AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com, int c, int seed);
 
-    void phase_replication() override;
     void phase_computation() override;
 };
 
@@ -48,7 +48,6 @@ class AlgorithmCOLABC : public Algorithm {
 public:
     AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *communicator, int seed) {};
 
-    void phase_replication() override {};
     void phase_computation() override {};
 };
 

@@ -49,7 +49,7 @@ void Communicator::BroadcastN(int n) {
 
 int Communicator::ReceiveN() {
     int n;
-    MPI_Bcast(&n, 1, MPI_INT, _rank, _comm);
+    MPI_Bcast(&n, 1, MPI_INT, rankCoordinator(), _comm);
     return n;
 }
 
@@ -86,6 +86,28 @@ std::unique_ptr<matrix::Sparse> Communicator::ReceiveSparse(int sender, int phas
     MPI_Recv(rows_number_of_values.data(), meta[1], MPI_INT, sender, phase, _comm, MPI_STATUS_IGNORE);
     return std::make_unique<matrix::Sparse>(meta[2], std::move(values), std::move(rows_number_of_values),
         std::move(values_column));
+}
+
+
+void Communicator::BroadcastSendSparse(matrix::Sparse *m) {
+    int meta[3] = {static_cast<int>(m->values.size()), static_cast<int>(m->rows_number_of_values.size()), m->n};
+    MPI_Bcast(&meta[0], 3, MPI_INT, _rank, _comm);
+    MPI_Bcast(m->values.data(), m->values.size(), MPI_DOUBLE, _rank, _comm);
+    MPI_Bcast(m->values_column.data(), m->values_column.size(), MPI_INT, _rank, _comm);
+    MPI_Bcast(m->rows_number_of_values.data(), m->rows_number_of_values.size(), MPI_INT, _rank, _comm);
+}
+
+std::unique_ptr<matrix::Sparse> Communicator::BroadcastReceiveSparse(int root) {
+    int meta[3];
+    MPI_Bcast(&meta[0], 3, MPI_INT, root, _comm);
+    std::vector<double> values(meta[0]);
+    std::vector<int> values_column(meta[0]);
+    std::vector<int> rows_number_of_values(meta[1]);
+    MPI_Bcast(values.data(), meta[0], MPI_DOUBLE, root, _comm);
+    MPI_Bcast(values_column.data(), meta[0], MPI_INT, root, _comm);
+    MPI_Bcast(rows_number_of_values.data(), meta[1], MPI_INT, root, _comm);
+    return std::make_unique<matrix::Sparse>(meta[2], std::move(values), std::move(rows_number_of_values),
+                                            std::move(values_column));
 }
 
 }

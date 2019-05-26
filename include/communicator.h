@@ -36,6 +36,9 @@ public:
 
     void SendSparse(matrix::Sparse *m, int receiver, int phase);
     std::unique_ptr<matrix::Sparse> ReceiveSparse(int sender, int phase);
+
+    void BroadcastSendSparse(matrix::Sparse *m);
+    std::unique_ptr<matrix::Sparse> BroadcastReceiveSparse(int root);
 };
 
 }

@@ -73,8 +73,13 @@ std::vector<Sparse> Sparse::SplitColumns(int processes) {
         for (int i = 0; i < values_in_row; i++) {
             int column = values_column[it];
             int part = column / block_width;
+            if (m_rows_values[part].empty()) {
+                m_rows_values[part].push_back(0);
+            }
             if (row > m_last_row[part]) {
-                m_rows_values[part].push_back(m_values[part].size());
+                for (int w = 0; w < (row - m_last_row[part]); w++) {
+                    m_rows_values[part].push_back(m_values[part].size());
+                }
                 m_last_row[part] = row;
             }
             m_values[part].push_back(values[it]);
@@ -85,10 +90,23 @@ std::vector<Sparse> Sparse::SplitColumns(int processes) {
 
     std::vector<Sparse> matrices;
     for (int i = 0; i < processes; i++) {
+        m_rows_values[i].push_back(m_values[i].size());
         auto m = Sparse(n, std::move(m_values[i]), std::move(m_rows_values[i]), std::move(m_value_column[i]));
         matrices.push_back(m);
     }
     return matrices;
+}
+
+std::pair<int, int> Sparse::ColumnRange() {
+    int min = n;
+    int max = 0;
+    for (const int &c : values_column) {
+        if (c < min)
+            min = c;
+        if (c > max)
+            max = c;
+    }
+    return {min, max};
 }
 
 std::ostream &operator<<(std::ostream &os, const Sparse &m) {
@@ -107,6 +125,88 @@ std::ostream &operator<<(std::ostream &os, const Sparse &m) {
         os << std::endl;
     }
     return os;
+}
+
+bool sitCmp(std::tuple<int,int,double> a, std::tuple<int,int,double> b) {
+    if (std::get<2>(a) == 0) {
+        return false;
+    }
+    if (std::get<2>(b) == 0 || std::get<0>(a) < std::get<0>(b)) {
+        return true;
+    } else if (std::get<0>(a) == std::get<0>(b)) {
+        return std::get<1>(a) < std::get<1>(b);
+    }
+    return false;
+}
+
+Sparse::Sparse(Sparse *a, Sparse *b) {
+    auto ait = SparseIt(a);
+    auto bit = SparseIt(b);
+
+    n = a->n;
+    int items = a->values.size() + b->values.size();
+    values.resize(items);
+    rows_number_of_values.push_back(0);
+    values_column.resize(items);
+
+    int i = 0;
+    ait.Next(); bit.Next();
+    auto av = ait.Value();
+    auto bv = bit.Value();
+    auto it = av;
+    int last_row = 0;
+    int r, c;
+
+    while (i < items) {
+        if (sitCmp(av, bv)) {
+            it = av;
+            ait.Next();
+        } else {
+            it = bv;
+            bit.Next();
+        }
+
+        r = std::get<0>(it); c = std::get<1>(it);
+        values[i] = std::get<double>(it);
+        values_column[i] = c;
+        if (r > last_row) {
+            for (int j = 0; j < (r - last_row); j++)
+                rows_number_of_values.push_back(i);
+            last_row = r;
+        }
+        i++;
+
+        av = ait.Value();
+        bv = bit.Value();
+    }
+    rows_number_of_values.push_back(items);
+}
+
+SparseIt::SparseIt(matrix::Sparse *m) : _m{m} {}
+
+std::tuple<int,int,double> SparseIt::Value() {
+    if (i >= static_cast<int>(_m->values.size())) {
+        return std::make_tuple(-1, -1, 0);
+    }
+    return std::make_tuple(r, _m->values_column[i], _m->values[i]);
+}
+
+bool SparseIt::Next() {
+    if (++i >= static_cast<int>(_m->values.size())) {
+        return false;
+    }
+    if (--_values_in_row <= 0) {
+        r++;
+        update();
+    }
+    return true;
+}
+
+void SparseIt::update() {
+    while (_m->rows_number_of_values[r+1] - _m->rows_number_of_values[r] == 0) {
+        r++;
+    }
+    _values_in_row = _m->rows_number_of_values[r+1] - _m->rows_number_of_values[r];
 }
 
 }

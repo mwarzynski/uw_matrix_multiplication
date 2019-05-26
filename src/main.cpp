@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     std::unique_ptr<matrixmul::Algorithm> algorithm;
     switch (arg.algorithm) {
         case matrixmul::Algorithms::COLA:
-            algorithm = std::make_unique<matrixmul::AlgorithmCOLA>(std::move(matrix_sparse), &communicator, arg.seed);
+            algorithm = std::make_unique<matrixmul::AlgorithmCOLA>(std::move(matrix_sparse), &communicator, arg.replication_group_size, arg.seed);
             break;
         case matrixmul::Algorithms::COLABC:
             algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator, arg.seed);

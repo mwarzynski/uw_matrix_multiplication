@@ -35,11 +35,28 @@ public:
 
     Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
                  std::vector<int> &&values_column);
+    Sparse(Sparse *a, Sparse *b);
 
     std::vector<Sparse> SplitColumns(int processes);
+    std::pair<int, int> ColumnRange();
 };
 
 std::ostream& operator<<(std::ostream &os, const Sparse &m);
+
+class SparseIt {
+public:
+    explicit SparseIt(Sparse *m);
+
+    std::tuple<int,int,double> Value(); // (x,y,value)
+    bool Next();
+private:
+    Sparse *_m;
+    int i = -1;
+    int r = -1;
+    int _values_in_row = 0;
+
+    void update();
+};
 
 }
 
