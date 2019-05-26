@@ -24,7 +24,7 @@ void Algorithm::initializeWorker() {
 AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *communicator, int seed) {
     com = communicator;
     if (com->isCoordinator()) {
-        initializeCoordinator(full_matrix->n, full_matrix->Split(com->numProcesses()));
+        initializeCoordinator(full_matrix->n, full_matrix->SplitColumns(com->numProcesses()));
     } else {
         initializeWorker();
     }

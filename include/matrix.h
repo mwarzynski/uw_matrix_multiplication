@@ -36,7 +36,7 @@ public:
                  std::vector<int> &&values_column);
     Sparse() {};
 
-    std::vector<Sparse> Split(int processes);
+    std::vector<Sparse> SplitColumns(int processes);
 };
 
 std::ostream& operator<<(std::ostream &os, const Sparse &m);

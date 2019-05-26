@@ -57,13 +57,13 @@ Sparse::Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_numb
                                                     rows_number_of_values{rows_number_of_values},
                                                     values_column{values_column} {}
 
-std::vector<Sparse> Sparse::Split(int p) {
-    std::vector<std::vector<double>> m_values(p);
-    std::vector<int> m_last_row(p);
-    std::vector<std::vector<int>> m_rows_values(p);
-    std::vector<std::vector<int>> m_value_column(p);
+std::vector<Sparse> Sparse::SplitColumns(int processes) {
+    std::vector<std::vector<double>> m_values(processes);
+    std::vector<int> m_last_row(processes);
+    std::vector<std::vector<int>> m_rows_values(processes);
+    std::vector<std::vector<int>> m_value_column(processes);
 
-    int block_width = block_column_size(n, p);
+    int block_width = block_column_size(n, processes);
     int it = 0;
     for (int row = 0; row < n; row++) {
         int values_in_row = rows_number_of_values[row + 1] - rows_number_of_values[row];
@@ -81,7 +81,7 @@ std::vector<Sparse> Sparse::Split(int p) {
     }
 
     std::vector<Sparse> matrices;
-    for (int i = 0; i < p; i++) {
+    for (int i = 0; i < processes; i++) {
         auto m = Sparse(n, std::move(m_values[i]), std::move(m_rows_values[i]), std::move(m_value_column[i]));
         matrices.push_back(m);
     }
