@@ -34,6 +34,9 @@ Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
     values.resize(columns * n);
 }
 
+Dense::Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values) : rows{rows},
+    column_base{column_base}, columns{columns}, columns_total{columns_total}, values{values} {}
+
 std::ostream &operator<<(std::ostream &os, const Dense &m) {
     int i = 0;
     for (int r = 0; r < m.rows; r++) {

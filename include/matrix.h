@@ -1,6 +1,7 @@
 #ifndef UW_MATRIX_MULTIPLICATION_MATRIX_H
 #define UW_MATRIX_MULTIPLICATION_MATRIX_H
 
+#include <memory>
 #include <vector>
 #include <iostream>
 #include "densematgen.h"
@@ -19,7 +20,7 @@ public:
 
     Dense(int n, int part, int parts_total, int seed);
     Dense(int n, int part, int parts_total);
-    Dense() {};
+    Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values);
 };
 
 std::ostream& operator<<(std::ostream &os, const Dense &m);
@@ -34,7 +35,6 @@ public:
 
     Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
                  std::vector<int> &&values_column);
-    Sparse() {};
 
     std::vector<Sparse> SplitColumns(int processes);
 };
