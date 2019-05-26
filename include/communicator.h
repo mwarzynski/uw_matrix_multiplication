@@ -5,7 +5,7 @@
 #include "mpi.h"
 #include "matrix.h"
 
-#define TAG_INITIALIZATION 10
+#define PHASE_INITIALIZATION 10
 
 
 namespace messaging {
@@ -27,11 +27,11 @@ public:
     void BroadcastN(int n);
     int ReceiveN();
 
-    void SendDense(matrix::Dense *m, int receiver, int tag);
-    std::unique_ptr<matrix::Dense> ReceiveDense(int sender, int tag);
+    void SendDense(matrix::Dense *m, int receiver, int phase);
+    std::unique_ptr<matrix::Dense> ReceiveDense(int sender, int phase);
 
-    void SendSparse(matrix::Sparse *m, int receiver, int tag);
-    std::unique_ptr<matrix::Sparse> ReceiveSparse(int sender, int tag);
+    void SendSparse(matrix::Sparse *m, int receiver, int phase);
+    std::unique_ptr<matrix::Sparse> ReceiveSparse(int sender, int phase);
 };
 
 }
