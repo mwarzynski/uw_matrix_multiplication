@@ -28,6 +28,10 @@ public:
     void ItemAdd(int x, int y, double value);
 };
 
+using Denses = std::vector<std::unique_ptr<Dense>>;
+
+std::unique_ptr<Dense> Merge(Denses ds);
+
 std::ostream& operator<<(std::ostream &os, const Dense &m);
 
 class Sparse {

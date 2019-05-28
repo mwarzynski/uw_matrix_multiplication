@@ -56,6 +56,33 @@ void Dense::ItemAdd(int x, int y, double value) {
     Set(x, y, v + value);
 }
 
+std::unique_ptr<Dense> Merge(Denses ds) {
+    // Prepare meta information.
+    int n = ds[0]->rows;
+    int column_base = ds[0]->column_base;
+    int columns = 0;
+    size_t values_size = 0;
+    for (const auto &m : ds) {
+        columns += m->columns;
+        values_size += m->values.size();
+    }
+    // Copy item values.
+    std::vector<double> values;
+    values.resize(values_size);
+
+    int i = 0;
+    for (int r = 0; r < n; r++) {
+        for (const auto &m : ds) {
+            int base_c = r * m->columns;
+            for (int j = 0; j < m->columns; j++) {
+                values[i++] = m->values[base_c + j];
+            }
+        }
+    }
+    // Create unique pointer to the newly created Matrix.
+    return std::make_unique<Dense>(n, column_base, columns, n, std::move(values));
+}
+
 std::ostream &operator<<(std::ostream &os, const Dense &m) {
     int i = 0;
     for (int r = 0; r < m.rows; r++) {

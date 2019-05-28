@@ -42,6 +42,8 @@ void Algorithm::phase_final_ge(double g) {
             counter++;
     }
     if (communicator->isCoordinator()) {
+        // TODO: use MPI Reduce
+        // https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/
         for (int p = 1; p < communicator->numProcesses(); p++)
             counter += communicator->ReceiveN(p, PHASE_FINAL);
         // Print out the result to stdout.
@@ -51,7 +53,39 @@ void Algorithm::phase_final_ge(double g) {
     }
 }
 
-void Algorithm::phase_final_matrix() {}
+void Algorithm::phase_final_matrix() {
+    // Firstly, send results to the replication group leader.
+    int divider = communicator->rank() / c;
+    auto comm_replication = communicator->Split(divider);
+    std::vector<std::unique_ptr<matrix::Dense>> ds;
+    if (comm_replication.isCoordinator()) {
+        ds.push_back(std::move(matrixC));
+        for (int i = 1; i < comm_replication.numProcesses(); i++) {
+            auto m = comm_replication.ReceiveDense(i, PHASE_FINAL);
+            ds.push_back(std::move(m));
+        }
+    } else {
+        comm_replication.SendDense(matrixC.get(), comm_replication.rankCoordinator(), PHASE_FINAL);
+        return;
+    }
+
+    auto res = matrix::Merge(std::move(ds));
+    ds.clear();
+
+    // Secondly, send results to global coordinator.
+    if (communicator->isCoordinator()) {
+        ds.push_back(std::move(res));
+        for (int i = c; i < communicator->numProcesses(); i += c) {
+            auto m = communicator->ReceiveDense(i, PHASE_FINAL);
+            ds.push_back(std::move(m));
+        }
+        auto final_result = matrix::Merge(std::move(ds));
+        std::cout.precision(5);
+        std::cout << *final_result << std::endl;
+    } else {
+        communicator->SendDense(res.get(), communicator->rankCoordinator(), PHASE_FINAL);
+    }
+}
 
 AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
     int rf, int seed) {
@@ -106,6 +140,7 @@ void AlgorithmCOLA::phase_computation(int power) {
             phase_computation_partial();
             phase_computation_cycle_A(&comm_computation);
         }
+        // Swap Matrix B with Matrix C.
         auto mb = std::move(matrixB);
         matrixB = std::move(matrixC);
         std::fill(mb->values.begin(), mb->values.end(), 0);
