@@ -21,7 +21,7 @@ Arguments::Arguments(int argc, char **argv) {
                 this->exponent = std::strtol(optarg, &end, 10);
                 break;
             case 'g':
-                this->ge_value = std::strtol(optarg, &end, 10);
+                this->ge_value = std::strtod(optarg, &end);
                 break;
             case 'v':
                 this->print_the_matrix_c = true;

@@ -20,7 +20,7 @@ public:
     bool print_the_matrix_c = false;
     int replication_group_size = 1;
     int exponent = 0;
-    int ge_value = 0;
+    double ge_value = 0;
     bool mkl = false;
 
     Arguments(int argc, char **argv);

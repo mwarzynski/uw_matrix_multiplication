@@ -9,7 +9,7 @@ void Algorithm::prepareMatrices(int seed) {
 
 void Algorithm::initializeCoordinator(int matrix_n, std::vector<matrix::Sparse> matricesA) {
     n = matrix_n;
-    communicator->BroadcastN(n);
+    communicator->BroadcastSendN(n);
     matrixA = std::make_unique<matrix::Sparse>(matricesA[0]);
     for (size_t i = 1; i < matricesA.size(); i++) {
         communicator->SendSparse(&matricesA[i], i, PHASE_INITIALIZATION);
@@ -17,7 +17,7 @@ void Algorithm::initializeCoordinator(int matrix_n, std::vector<matrix::Sparse> 
 }
 
 void Algorithm::initializeWorker() {
-    n = communicator->ReceiveN();
+    n = communicator->BroadcastReceiveN();
     matrixA = communicator->ReceiveSparse(messaging::Communicator::rankCoordinator(), PHASE_INITIALIZATION);
 }
 
@@ -35,7 +35,21 @@ void Algorithm::phase_replication() {
     }
 }
 
-void Algorithm::phase_final_ge() {}
+void Algorithm::phase_final_ge(double g) {
+    long counter = 0;
+    for (const auto &v : matrixC->values) {
+        if (v >= g)
+            counter++;
+    }
+    if (communicator->isCoordinator()) {
+        for (int p = 1; p < communicator->numProcesses(); p++)
+            counter += communicator->ReceiveN(p, PHASE_FINAL);
+        // Print out the result to stdout.
+        std::cout << counter << std::endl;
+    } else {
+        communicator->SendN(counter, communicator->rankCoordinator(), PHASE_FINAL);
+    }
+}
 
 void Algorithm::phase_final_matrix() {}
 
@@ -85,12 +99,19 @@ void AlgorithmCOLA::phase_computation_cycle_A(messaging::Communicator *comm) {
     }
 }
 
-void AlgorithmCOLA::phase_computation() {
+void AlgorithmCOLA::phase_computation(int power) {
     auto comm_computation = communicator->Split(communicator->rank() % c);
-    for (int i = 0; i < comm_computation.numProcesses(); i++) {
-        phase_computation_partial();
-        phase_computation_cycle_A(&comm_computation);
+    for (int p = 0; p < power; p++) {
+        for (int i = 0; i < comm_computation.numProcesses(); i++) {
+            phase_computation_partial();
+            phase_computation_cycle_A(&comm_computation);
+        }
+        auto mb = std::move(matrixB);
+        matrixB = std::move(matrixC);
+        std::fill(mb->values.begin(), mb->values.end(), 0);
+        matrixC = std::move(mb);
     }
+    matrixC = std::move(matrixB);
 }
 
 }

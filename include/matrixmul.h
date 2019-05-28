@@ -10,6 +10,7 @@
 
 #define PHASE_INITIALIZATION 10
 #define PHASE_COMPUTATION 10
+#define PHASE_FINAL 10
 
 
 namespace matrixmul {
@@ -30,10 +31,10 @@ public:
     std::unique_ptr<matrix::Dense> matrixC;
 
     void phase_replication();
-    virtual void phase_computation() = 0;
+    virtual void phase_computation(int power) = 0;
 
     void phase_final_matrix();
-    void phase_final_ge();
+    void phase_final_ge(double g);
 
     void prepareMatrices(int seed);
     void initializeWorker();
@@ -44,7 +45,7 @@ class AlgorithmCOLA : public Algorithm {
 public:
     AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com, int c, int seed);
 
-    void phase_computation() override;
+    void phase_computation(int power) override;
 private:
     void phase_computation_partial();
     void phase_computation_cycle_A(messaging::Communicator *comm);
@@ -54,7 +55,7 @@ class AlgorithmCOLABC : public Algorithm {
 public:
     AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *communicator, int seed) {};
 
-    void phase_computation() override {};
+    void phase_computation(int power) override {};
 };
 
 }

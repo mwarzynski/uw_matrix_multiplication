@@ -35,11 +35,11 @@ int main(int argc, char **argv) {
     algorithm->phase_replication();
 
     // 3. Computation.
-    algorithm->phase_computation();
+    algorithm->phase_computation(arg.exponent);
 
     // Final phase of gathering results from the workers.
-    if (arg.ge_value) {
-        algorithm->phase_final_ge();
+    if (arg.ge_value > 0) {
+        algorithm->phase_final_ge(arg.ge_value);
     } else if (arg.print_the_matrix_c) {
         algorithm->phase_final_matrix();
     }

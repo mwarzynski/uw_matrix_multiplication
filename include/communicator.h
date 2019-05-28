@@ -26,8 +26,11 @@ public:
     int rank();
     int numProcesses();
 
-    void BroadcastN(int n);
-    int ReceiveN();
+    void BroadcastSendN(int n);
+    int BroadcastReceiveN();
+
+    void SendN(long n, int receiver, int phase);
+    long ReceiveN(int sender, int phase);
 
     void SendDense(matrix::Dense *m, int receiver, int phase);
     std::unique_ptr<matrix::Dense> ReceiveDense(int sender, int phase);

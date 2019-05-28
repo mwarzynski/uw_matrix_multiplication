@@ -43,13 +43,23 @@ int Communicator::numProcesses() {
     return _num_processes;
 }
 
-void Communicator::BroadcastN(int n) {
+void Communicator::BroadcastSendN(int n) {
     MPI_Bcast(&n, 1, MPI_INT, _rank, _comm);
 }
 
-int Communicator::ReceiveN() {
+int Communicator::BroadcastReceiveN() {
     int n;
     MPI_Bcast(&n, 1, MPI_INT, rankCoordinator(), _comm);
+    return n;
+}
+
+void Communicator::SendN(long n, int receiver, int phase) {
+    MPI_Send(&n, 1, MPI_LONG, receiver, phase, _comm);
+}
+
+long Communicator::ReceiveN(int sender, int phase) {
+    long n;
+    MPI_Recv(&n, 1, MPI_LONG, sender, phase, _comm, MPI_STATUS_IGNORE);
     return n;
 }
 
