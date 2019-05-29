@@ -128,7 +128,7 @@ Sparse::Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_numb
                                                     rows_number_of_values{rows_number_of_values},
                                                     values_column{values_column} {}
 
-std::vector<Sparse> Sparse::SplitColumns(int processes) {
+std::vector<Sparse> Sparse::Split(int processes, bool split_by_column) {
     std::vector<std::vector<double>> m_values(processes);
     std::vector<int> m_last_row(processes);
     std::vector<std::vector<int>> m_rows_values(processes);
@@ -140,7 +140,12 @@ std::vector<Sparse> Sparse::SplitColumns(int processes) {
         int values_in_row = rows_number_of_values[row + 1] - rows_number_of_values[row];
         for (int i = 0; i < values_in_row; i++) {
             int column = values_column[it];
-            int part = column / block_width;
+            int part;
+            if (split_by_column) {
+                part = column / block_width;
+            } else {
+                part = row / block_width;
+            }
             if (m_rows_values[part].empty()) {
                 m_rows_values[part].push_back(0);
             }

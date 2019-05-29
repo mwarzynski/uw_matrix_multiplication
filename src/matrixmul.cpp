@@ -91,7 +91,7 @@ AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messag
     communicator = com;
     c = rf;
     if (communicator->isCoordinator()) {
-        initializeCoordinator(full_matrix->n, full_matrix->SplitColumns(communicator->numProcesses()));
+        initializeCoordinator(full_matrix->n, full_matrix->Split(communicator->numProcesses(), true));
     } else {
         initializeWorker();
     }

@@ -50,7 +50,7 @@ public:
                  std::vector<int> &&values_column);
     Sparse(Sparse *a, Sparse *b);
 
-    std::vector<Sparse> SplitColumns(int processes);
+    std::vector<Sparse> Split(int processes, bool split_by_column);
     std::pair<int, int> ColumnRange();
 };
 
