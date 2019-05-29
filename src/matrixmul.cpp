@@ -1,4 +1,5 @@
 #include "matrixmul.h"
+#include <assert.h>
 
 namespace matrixmul {
 
@@ -18,10 +19,10 @@ void Algorithm::initializeCoordinator(int matrix_n, std::vector<matrix::Sparse> 
 
 void Algorithm::initializeWorker() {
     n = communicator->BroadcastReceiveN();
-    matrixA = communicator->ReceiveSparse(messaging::Communicator::rankCoordinator(), PHASE_INITIALIZATION);
+    matrixA = communicator->ReceiveSparse(communicator->rankCoordinator(), PHASE_INITIALIZATION);
 }
 
-void Algorithm::phase_replication() {
+void Algorithm::phaseReplication() {
     auto matrixA_copy = *matrixA;
     int divider = communicator->rank() / c;
     auto comm_replication = communicator->Split(divider);
@@ -35,7 +36,7 @@ void Algorithm::phase_replication() {
     }
 }
 
-void Algorithm::phase_final_ge(double g) {
+void Algorithm::phaseFinalGE(double g) {
     long counter = 0;
     for (const auto &v : matrixC->values) {
         if (v >= g)
@@ -53,7 +54,7 @@ void Algorithm::phase_final_ge(double g) {
     }
 }
 
-void Algorithm::phase_final_matrix() {
+void Algorithm::phaseFinalMatrix() {
     // Firstly, send results to the replication group leader.
     int divider = communicator->rank() / c;
     auto comm_replication = communicator->Split(divider);
@@ -99,7 +100,7 @@ AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messag
     prepareMatrices(seed);
 }
 
-void AlgorithmCOLA::phase_computation_partial() {
+void AlgorithmCOLA::phaseComputationPartial() {
     auto it = matrix::SparseIt(matrixA.get());
     auto b_range = matrixB->ColumnRange();
     while (it.Next()) {
@@ -108,7 +109,11 @@ void AlgorithmCOLA::phase_computation_partial() {
         int ax = std::get<0>(itv);
         int ay = std::get<1>(itv);
 
+        assert(ax != -1);
+        assert(ay != -1);
+
         double av = std::get<2>(itv);
+        assert(av != 0);
         for (int by = b_range.first; by <= b_range.second; by++) {
             double bv = matrixB->Get(ay, by);
             auto cv = av * bv;
@@ -117,7 +122,7 @@ void AlgorithmCOLA::phase_computation_partial() {
     }
 }
 
-void AlgorithmCOLA::phase_computation_cycle_A(messaging::Communicator *comm) {
+void AlgorithmCOLA::phaseComputationCycleA(messaging::Communicator *comm) {
     int sender = comm->rank() - 1;
     if (sender == -1) {
         sender = comm->numProcesses() - 1;
@@ -133,12 +138,12 @@ void AlgorithmCOLA::phase_computation_cycle_A(messaging::Communicator *comm) {
     }
 }
 
-void AlgorithmCOLA::phase_computation(int power) {
+void AlgorithmCOLA::phaseComputation(int power) {
     auto comm_computation = communicator->Split(communicator->rank() % c);
     for (int p = 0; p < power; p++) {
         for (int i = 0; i < comm_computation.numProcesses(); i++) {
-            phase_computation_partial();
-            phase_computation_cycle_A(&comm_computation);
+            phaseComputationPartial();
+            phaseComputationCycleA(&comm_computation);
         }
         // Swap Matrix B with Matrix C.
         auto mb = std::move(matrixB);

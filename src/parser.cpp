@@ -86,7 +86,7 @@ std::unique_ptr<matrix::Sparse> parse_sparse_matrix(const std::string &filename)
             nonzero_values.push_back(value);
         }
         int item;
-        for (int i = 0; i <= total_items; i += max_row_items) {
+        for (int i = 0; i < rows+1; i++) {
             if (!(f >> item)) {
                 throw std::runtime_error("Invalid third line - couldn't parse one of the values as int.");
             }

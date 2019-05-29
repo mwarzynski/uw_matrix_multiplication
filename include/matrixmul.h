@@ -30,11 +30,11 @@ public:
     std::unique_ptr<matrix::Dense> matrixB;
     std::unique_ptr<matrix::Dense> matrixC;
 
-    void phase_replication();
-    virtual void phase_computation(int power) = 0;
+    void phaseReplication();
+    virtual void phaseComputation(int power) = 0;
 
-    void phase_final_matrix();
-    void phase_final_ge(double g);
+    void phaseFinalMatrix();
+    void phaseFinalGE(double g);
 
     void prepareMatrices(int seed);
     void initializeWorker();
@@ -45,17 +45,17 @@ class AlgorithmCOLA : public Algorithm {
 public:
     AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com, int c, int seed);
 
-    void phase_computation(int power) override;
+    void phaseComputation(int power) override;
 private:
-    void phase_computation_partial();
-    void phase_computation_cycle_A(messaging::Communicator *comm);
+    void phaseComputationPartial();
+    void phaseComputationCycleA(messaging::Communicator *comm);
 };
 
 class AlgorithmCOLABC : public Algorithm {
 public:
     AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *communicator, int seed) {};
 
-    void phase_computation(int power) override {};
+    void phaseComputation(int power) override {};
 };
 
 }

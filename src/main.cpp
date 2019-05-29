@@ -23,7 +23,8 @@ int main(int argc, char **argv) {
     std::unique_ptr<matrixmul::Algorithm> algorithm;
     switch (arg.algorithm) {
         case matrixmul::Algorithms::COLA:
-            algorithm = std::make_unique<matrixmul::AlgorithmCOLA>(std::move(matrix_sparse), &communicator, arg.replication_group_size, arg.seed);
+            algorithm = std::make_unique<matrixmul::AlgorithmCOLA>(std::move(matrix_sparse), &communicator,
+                arg.replication_group_size, arg.seed);
             break;
         case matrixmul::Algorithms::COLABC:
             algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator, arg.seed);
@@ -32,16 +33,16 @@ int main(int argc, char **argv) {
 
     // 2. After this initial data distribution, processes should contact their peers in replication groups and
     // exchange their parts of matrices.
-    algorithm->phase_replication();
+    algorithm->phaseReplication();
 
     // 3. Computation.
-    algorithm->phase_computation(arg.exponent);
+    algorithm->phaseComputation(arg.exponent);
 
     // Final phase of gathering results from the workers.
     if (arg.ge_value > 0) {
-        algorithm->phase_final_ge(arg.ge_value);
+        algorithm->phaseFinalGE(arg.ge_value);
     } else if (arg.print_the_matrix_c) {
-        algorithm->phase_final_matrix();
+        algorithm->phaseFinalMatrix();
     }
 
     // Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)

@@ -22,7 +22,7 @@ public:
     Communicator Split(int divider);
 
     bool isCoordinator();
-    static int rankCoordinator();
+    int rankCoordinator();
     int rank();
     int numProcesses();
 

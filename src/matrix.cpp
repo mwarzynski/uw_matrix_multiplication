@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include <assert.h>
 
 namespace matrix {
 
@@ -42,13 +43,17 @@ std::pair<int, int> Dense::ColumnRange() {
 }
 
 double Dense::Get(int x, int y) {
-    int rx = x - column_base;
-    return values[columns*rx + y];
+    int ry = y - column_base;
+    assert(ry >= 0);
+    assert(ry < values.size());
+    return values[columns*ry + x];
 }
 
 void Dense::Set(int x, int y, double value) {
-    int rx = x - column_base;
-    values[columns*rx + y] = value;
+    int ry = y - column_base;
+    assert(ry >= 0);
+    assert(ry < values.size());
+    values[columns*ry + x] = value;
 }
 
 void Dense::ItemAdd(int x, int y, double value) {
