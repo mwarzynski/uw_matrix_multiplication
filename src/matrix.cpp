@@ -31,6 +31,13 @@ Dense::Dense(int n, int part, int parts_total, int seed) : rows{n}, columns_tota
 Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
     columns = block_column_size(n, parts_total);
     column_base = block_column_base(n, &columns, part);
+    if (columns < 0) {
+        columns = 0;
+        column_base = n;
+        return;
+    }
+    size_t s = columns * n;
+    assert(s < values.max_size());
     values.resize(columns * n);
 }
 
@@ -82,6 +89,7 @@ std::unique_ptr<Dense> Merge(Denses &&ds) {
     }
     // Copy item values.
     std::vector<double> values;
+    assert(values_size < values.max_size());
     values.resize(values_size);
 
     int i = 0;
@@ -209,8 +217,10 @@ Sparse::Sparse(Sparse *a, Sparse *b) {
     // Initialize values for the new Sparse matrix.
     n = a->n;
     size_t items = a->values.size() + b->values.size();
+    assert(items < values.max_size());
     values.resize(items);
     rows_number_of_values.push_back(0);
+    assert(items < values_column.max_size());
     values_column.resize(items);
     // Initialize variables for the while loop.
     // Iterator's values, row, column, last_row.
