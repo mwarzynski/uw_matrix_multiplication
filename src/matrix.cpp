@@ -208,13 +208,13 @@ Sparse::Sparse(Sparse *a, Sparse *b) {
     auto bit = SparseIt(b);
     // Initialize values for the new Sparse matrix.
     n = a->n;
-    int items = a->values.size() + b->values.size();
+    size_t items = a->values.size() + b->values.size();
     values.resize(items);
     rows_number_of_values.push_back(0);
     values_column.resize(items);
     // Initialize variables for the while loop.
     // Iterator's values, row, column, last_row.
-    int i = 0;
+    size_t i = 0;
     ait.Next(); bit.Next();
     auto av = ait.Value();
     auto bv = bit.Value();
