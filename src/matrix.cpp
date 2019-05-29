@@ -1,5 +1,4 @@
 #include "matrix.h"
-#include <assert.h>
 
 namespace matrix {
 
@@ -42,29 +41,39 @@ std::pair<int, int> Dense::ColumnRange() {
     return std::make_pair(column_base, column_base + columns - 1);
 }
 
+size_t Dense::valuesIndex(int x, int y) {
+    int ry = y * columns;
+    int rx = x - column_base;
+    assert(ry + rx >= 0);
+    assert(ry + rx < static_cast<int>(values.size()));
+    return ry + rx;
+}
+
 double Dense::Get(int x, int y) {
-    int ry = y - column_base;
-    assert(ry >= 0);
-    assert(ry < values.size());
-    return values[columns*ry + x];
+    return values[valuesIndex(x, y)];
 }
 
 void Dense::Set(int x, int y, double value) {
-    int ry = y - column_base;
-    assert(ry >= 0);
-    assert(ry < values.size());
-    values[columns*ry + x] = value;
+    values[valuesIndex(x, y)] = value;
 }
 
 void Dense::ItemAdd(int x, int y, double value) {
-    auto v = Get(x, y);
-    Set(x, y, v + value);
+    Set(x, y, Get(x, y) + value);
 }
 
-std::unique_ptr<Dense> Merge(Denses ds) {
+std::unique_ptr<Dense> Merge(Denses &&ds) {
+    if (ds.empty()) {
+        return nullptr;
+    }
+    if (ds.size() == 1) {
+        return std::move(ds[0]);
+    }
     // Prepare meta information.
     int n = ds[0]->rows;
     int column_base = ds[0]->column_base;
+    for (size_t i = 0; i < ds.size() - 1; i++) {
+        assert(ds[i+1]->column_base == ds[i]->column_base + ds[i]->columns);
+    }
     int columns = 0;
     size_t values_size = 0;
     for (const auto &m : ds) {
@@ -78,17 +87,19 @@ std::unique_ptr<Dense> Merge(Denses ds) {
     int i = 0;
     for (int r = 0; r < n; r++) {
         for (const auto &m : ds) {
-            int base_c = r * m->columns;
+            size_t base = (r * m->columns);
             for (int j = 0; j < m->columns; j++) {
-                values[i++] = m->values[base_c + j];
+                values[i++] = m->values[base + j];
             }
         }
     }
+
     // Create unique pointer to the newly created Matrix.
     return std::make_unique<Dense>(n, column_base, columns, n, std::move(values));
 }
 
 std::ostream &operator<<(std::ostream &os, const Dense &m) {
+    std::cout.precision(5);
     int i = 0;
     for (int r = 0; r < m.rows; r++) {
         for (int c = 0; c < m.columns_total; c++) {

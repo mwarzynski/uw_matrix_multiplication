@@ -2,6 +2,7 @@
 #define UW_MATRIX_MULTIPLICATION_MATRIXMUL_H
 
 #include <memory>
+#include <cassert>
 #include "matrix.h"
 #include "communicator.h"
 

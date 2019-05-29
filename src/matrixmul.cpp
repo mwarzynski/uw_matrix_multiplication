@@ -1,5 +1,4 @@
 #include "matrixmul.h"
-#include <assert.h>
 
 namespace matrixmul {
 
@@ -81,7 +80,6 @@ void Algorithm::phaseFinalMatrix() {
             ds.push_back(std::move(m));
         }
         auto final_result = matrix::Merge(std::move(ds));
-        std::cout.precision(5);
         std::cout << *final_result << std::endl;
     } else {
         communicator->SendDense(res.get(), communicator->rankCoordinator(), PHASE_FINAL);
@@ -106,18 +104,18 @@ void AlgorithmCOLA::phaseComputationPartial() {
     while (it.Next()) {
         auto itv = it.Value();
 
-        int ax = std::get<0>(itv);
-        int ay = std::get<1>(itv);
+        int ay = std::get<0>(itv);
+        int ax = std::get<1>(itv);
 
         assert(ax != -1);
         assert(ay != -1);
 
         double av = std::get<2>(itv);
         assert(av != 0);
-        for (int by = b_range.first; by <= b_range.second; by++) {
-            double bv = matrixB->Get(ay, by);
+        for (int bx = b_range.first; bx <= b_range.second; bx++) {
+            double bv = matrixB->Get(bx, ax);
             auto cv = av * bv;
-            matrixC->ItemAdd(ax, by, cv);
+            matrixC->ItemAdd(bx, ay, cv);
         }
     }
 }

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <cassert>
 #include "densematgen.h"
 
 
@@ -26,11 +27,14 @@ public:
     double Get(int x, int y);
     void Set(int x, int y, double value);
     void ItemAdd(int x, int y, double value);
+
+private:
+    size_t valuesIndex(int x, int y);
 };
 
 using Denses = std::vector<std::unique_ptr<Dense>>;
 
-std::unique_ptr<Dense> Merge(Denses ds);
+std::unique_ptr<Dense> Merge(Denses &&ds);
 
 std::ostream& operator<<(std::ostream &os, const Dense &m);
 
