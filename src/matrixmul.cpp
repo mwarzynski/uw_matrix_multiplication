@@ -2,103 +2,48 @@
 
 namespace matrixmul {
 
-void Algorithm::prepareMatrices(int seed) {
+std::pair<int, int> group_divider(int rank, int replication_group_size, int processes) {
+    int first_group_id = rank / replication_group_size;
+    int first_group_item_id = rank % replication_group_size;
+    int second_group_id = (first_group_id +
+        first_group_item_id*(processes / (replication_group_size*replication_group_size))) %
+            (processes / replication_group_size);
+    return std::make_pair(first_group_id, second_group_id);
+}
+
+Algorithm::Algorithm(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com, int replication_factor,
+    int seed, bool split_by_columns) {
+    // Replicate Matrix A over the replication group.
+    communicator = com;
+    c = replication_factor;
+    // Replicate Matrix A over the replication group.
+    if (communicator->isCoordinator()) {
+        n = full_matrix->n;
+        communicator->BroadcastSendN(n);
+        auto matricesA = full_matrix->Split(communicator->numProcesses(), split_by_columns);
+        matrixA = std::make_unique<matrix::Sparse>(matricesA[0]);
+        for (size_t i = 1; i < matricesA.size(); i++) {
+            communicator->SendSparse(&matricesA[i], i, PHASE_INITIALIZATION);
+        }
+    } else {
+        n = communicator->BroadcastReceiveN();
+        matrixA = communicator->ReceiveSparse(communicator->rankCoordinator(), PHASE_INITIALIZATION);
+    }
+    // Prepare Matrix B and C.
     matrixB = std::make_unique<matrix::Dense>(n, communicator->rank(), communicator->numProcesses(), seed);
     matrixC = std::make_unique<matrix::Dense>(n, communicator->rank(), communicator->numProcesses());
-}
 
-void Algorithm::initializeCoordinator(int matrix_n, std::vector<matrix::Sparse> matricesA) {
-    n = matrix_n;
-    communicator->BroadcastSendN(n);
-    matrixA = std::make_unique<matrix::Sparse>(matricesA[0]);
-    for (size_t i = 1; i < matricesA.size(); i++) {
-        communicator->SendSparse(&matricesA[i], i, PHASE_INITIALIZATION);
+    if (communicator->numProcesses() % replication_factor != 0) {
+        throw std::invalid_argument("p % c != 0");
+    }
+
+    // TODO: Get rid of n % c == 0 requirement. Possibly append Matrix with zeroes.
+    if (n % replication_factor != 0) {
+        throw std::runtime_error("n % c != 0");
     }
 }
 
-void Algorithm::initializeWorker() {
-    n = communicator->BroadcastReceiveN();
-    matrixA = communicator->ReceiveSparse(communicator->rankCoordinator(), PHASE_INITIALIZATION);
-}
-
-void Algorithm::phaseReplication() {
-    auto matrixA_copy = *matrixA;
-    int divider = communicator->rank() / c;
-    auto comm_replication = communicator->Split(divider);
-    for (int i = 0; i < comm_replication.numProcesses(); i++) {
-        if (i == comm_replication.rank()) {
-            comm_replication.BroadcastSendSparse(&matrixA_copy);
-        } else {
-            auto b = comm_replication.BroadcastReceiveSparse(i);
-            matrixA = std::make_unique<matrix::Sparse>(matrixA.get(), b.get());
-        }
-    }
-}
-
-void Algorithm::phaseFinalGE(double g) {
-    long counter = 0;
-    for (const auto &v : matrixC->values) {
-        if (v >= g)
-            counter++;
-    }
-    if (communicator->isCoordinator()) {
-        // TODO: use MPI Reduce
-        // https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/
-        for (int p = 1; p < communicator->numProcesses(); p++)
-            counter += communicator->ReceiveN(p, PHASE_FINAL);
-        // Print out the result to stdout.
-        std::cout << counter << std::endl;
-    } else {
-        communicator->SendN(counter, communicator->rankCoordinator(), PHASE_FINAL);
-    }
-}
-
-void Algorithm::phaseFinalMatrix() {
-    // Firstly, send results to the replication group leader.
-    int divider = communicator->rank() / c;
-    auto comm_replication = communicator->Split(divider);
-    std::vector<std::unique_ptr<matrix::Dense>> ds;
-    if (comm_replication.isCoordinator()) {
-        ds.push_back(std::move(matrixC));
-        for (int i = 1; i < comm_replication.numProcesses(); i++) {
-            auto m = comm_replication.ReceiveDense(i, PHASE_FINAL);
-            ds.push_back(std::move(m));
-        }
-    } else {
-        comm_replication.SendDense(matrixC.get(), comm_replication.rankCoordinator(), PHASE_FINAL);
-        return;
-    }
-
-    auto res = matrix::Merge(std::move(ds));
-    ds.clear();
-
-    // Secondly, send results to global coordinator.
-    if (communicator->isCoordinator()) {
-        ds.push_back(std::move(res));
-        for (int i = c; i < communicator->numProcesses(); i += c) {
-            auto m = communicator->ReceiveDense(i, PHASE_FINAL);
-            ds.push_back(std::move(m));
-        }
-        auto final_result = matrix::Merge(std::move(ds));
-        std::cout << *final_result << std::endl;
-    } else {
-        communicator->SendDense(res.get(), communicator->rankCoordinator(), PHASE_FINAL);
-    }
-}
-
-AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
-    int rf, int seed) {
-    communicator = com;
-    c = rf;
-    if (communicator->isCoordinator()) {
-        initializeCoordinator(full_matrix->n, full_matrix->Split(communicator->numProcesses(), true));
-    } else {
-        initializeWorker();
-    }
-    prepareMatrices(seed);
-}
-
-void AlgorithmCOLA::phaseComputationPartial() {
+void Algorithm::phaseComputationPartial() {
     auto it = matrix::SparseIt(matrixA.get());
     auto b_range = matrixB->ColumnRange();
     while (it.Next()) {
@@ -112,7 +57,8 @@ void AlgorithmCOLA::phaseComputationPartial() {
 
         double av = std::get<2>(itv);
         assert(av != 0);
-        for (int bx = b_range.first; bx <= b_range.second; bx++) {
+
+        for (int bx = b_range.first; bx < b_range.second; bx++) {
             double bv = matrixB->Get(bx, ax);
             auto cv = av * bv;
             matrixC->ItemAdd(bx, ay, cv);
@@ -120,7 +66,7 @@ void AlgorithmCOLA::phaseComputationPartial() {
     }
 }
 
-void AlgorithmCOLA::phaseComputationCycleA(messaging::Communicator *comm) {
+void Algorithm::phaseComputationCycleA(messaging::Communicator *comm) {
     int sender = comm->rank() - 1;
     if (sender == -1) {
         sender = comm->numProcesses() - 1;
@@ -133,6 +79,92 @@ void AlgorithmCOLA::phaseComputationCycleA(messaging::Communicator *comm) {
         auto ma = comm->ReceiveSparse(sender, PHASE_COMPUTATION);
         comm->SendSparse(matrixA.get(), receiver, PHASE_COMPUTATION);
         matrixA = std::move(ma);
+    }
+}
+
+void AlgorithmCOLA::phaseFinalMatrix() {
+    // Divide the processes into replication groups.
+    int divider = communicator->rank() / c;
+    auto comm_replication = communicator->Split(divider);
+    std::vector<std::unique_ptr<matrix::Dense>> matrices;
+    // Firstly, send results to the replication group leader.
+    if (comm_replication.isCoordinator()) {
+        // Add process's own matrix to the result.
+        matrices.push_back(std::move(matrixC));
+        // Receive matrix results from other processes.
+        for (int p = 1; p < comm_replication.numProcesses(); p++) {
+            auto matrix = comm_replication.ReceiveDense(p, PHASE_FINAL);
+            matrices.push_back(std::move(matrix));
+        }
+    } else {
+        // If we aren't the coordinator in the replication group - just send the results and exit.
+        // There is nothing more to do.
+        comm_replication.SendDense(matrixC.get(), comm_replication.rankCoordinator(), PHASE_FINAL);
+        return;
+    }
+
+    // Merge results received from replication groups.
+    auto replication_result = matrix::Merge(std::move(matrices));
+    // Free memory / prepare vector for next pushes. (Solely for reader's clarity - look up move above.)
+    matrices.clear();
+
+    // Secondly, send results to the global coordinator.
+    if (communicator->isCoordinator()) {
+        // Coordinator shouldn't send his own part to himself.
+        // Therefore we just push the part to our result vector.
+        matrices.push_back(std::move(replication_result));
+        // Coordinator: receive parts from every other process.
+        for (int i = c; i < communicator->numProcesses(); i += c) {
+            auto m = communicator->ReceiveDense(i, PHASE_FINAL);
+            matrices.push_back(std::move(m));
+        }
+        // Coordinator: all parts where received.
+        // Coordinator: print out the Matrix.
+        auto final_result = matrix::Merge(std::move(matrices));
+        std::cout << *final_result << std::endl;
+    } else {
+        // Not a coordinator: send managed part to the coordinator.
+        communicator->SendDense(replication_result.get(), communicator->rankCoordinator(), PHASE_FINAL);
+    }
+}
+
+void Algorithm::phaseFinalGE(double g) {
+    // Count how many values greater or equal to `g` is in the part of the result.
+    long counter = 0;
+    for (const auto &v : matrixC->values) {
+        if (v >= g)
+            counter++;
+    }
+    // Send the counters to coordinator and print out the results.
+    if (communicator->isCoordinator()) {
+        // TODO: use MPI Reduce
+        // https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/
+        for (int p = 1; p < communicator->numProcesses(); p++)
+            counter += communicator->ReceiveN(p, PHASE_FINAL);
+        // Print out the result to stdout.
+        std::cout << counter << std::endl;
+    } else {
+        communicator->SendN(counter, communicator->rankCoordinator(), PHASE_FINAL);
+    }
+}
+
+AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
+    int replication_factor, int seed) : Algorithm(std::move(full_matrix), com, replication_factor, seed, true) { }
+
+void AlgorithmCOLA::phaseReplication() {
+    // Replicate Matrix A (this algorithm only replicates Matrix A).
+    auto matrixA_copy = *matrixA;
+    // Group processes which are next to each other together (012 345 678 ...).
+    int divider = communicator->rank() / c;
+    auto comm_replication = communicator->Split(divider);
+    // At this point, `comm_replication` is a communicator used within replication group.
+    for (int i = 0; i < comm_replication.numProcesses(); i++) {
+        if (i == comm_replication.rank()) {
+            comm_replication.BroadcastSendSparse(&matrixA_copy);
+        } else {
+            auto b = comm_replication.BroadcastReceiveSparse(i);
+            matrixA = std::make_unique<matrix::Sparse>(matrixA.get(), b.get());
+        }
     }
 }
 
@@ -150,6 +182,108 @@ void AlgorithmCOLA::phaseComputation(int power) {
         matrixC = std::move(mb);
     }
     matrixC = std::move(matrixB);
+}
+
+AlgorithmCOLABC::AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
+                                 int replication_factor, int seed) :
+                                 Algorithm(std::move(full_matrix), com, replication_factor, seed, false) {
+    if (communicator->numProcesses() % (replication_factor*replication_factor) != 0) {
+        throw std::invalid_argument("p % c^2 != 0");
+    }
+}
+
+void AlgorithmCOLABC::phaseReplication() {
+    // Replicate A.
+    auto matrixA_copy = *matrixA;
+    auto divider = group_divider(communicator->rank(), c, communicator->numProcesses());
+    auto comm_replication_a = communicator->Split(divider.second);
+    // At this point, `comm_replication` is a communicator used within replication group.
+    for (int i = 0; i < comm_replication_a.numProcesses(); i++) {
+        if (i == comm_replication_a.rank()) {
+            comm_replication_a.BroadcastSendSparse(&matrixA_copy);
+        } else {
+            auto b = comm_replication_a.BroadcastReceiveSparse(i);
+            matrixA = std::make_unique<matrix::Sparse>(matrixA.get(), b.get());
+        }
+    }
+
+    // Replicate B / C.
+    auto comm_replication_b = communicator->Split(divider.first);
+    matrix::Denses matrices_b;
+    for (int i = 0; i < comm_replication_b.numProcesses(); i++) {
+        if (i == comm_replication_b.rank()) {
+            comm_replication_b.BroadcastSendDense(matrixB.get());
+            matrices_b.push_back(std::move(matrixB));
+        } else {
+            auto b = comm_replication_b.BroadcastReceiveDense(i);
+            matrices_b.push_back(std::move(b));
+        }
+    }
+    matrixB = matrix::Merge(std::move(matrices_b));
+    matrixC = std::make_unique<matrix::Dense>(matrixB->rows, matrixB->ColumnRange());
+}
+
+void AlgorithmCOLABC::phaseComputation(int power) {
+    auto comm_replication_a = communicator->Split(communicator->rank() % c);
+    int rounds = communicator->numProcesses() / c;
+    for (int i = 0; i < power; i++) {
+        for (int j = 0; j < rounds; j++) {
+            phaseComputationPartial();
+            phaseComputationCycleA(&comm_replication_a);
+        }
+        // Swap Matrix B with Matrix C.
+        auto mb = std::move(matrixB);
+        matrixB = std::move(matrixC);
+        std::fill(mb->values.begin(), mb->values.end(), 0);
+        matrixC = std::move(mb);
+    }
+    matrixC = std::move(matrixB);
+}
+
+void AlgorithmCOLABC::phaseFinalMatrix() {
+    // Divide the processes into replication groups.
+    auto divider = group_divider(communicator->rank(), c, communicator->numProcesses());
+    auto comm_replication = communicator->Split(divider.first);
+    std::vector<std::unique_ptr<matrix::Dense>> matrices;
+    // Firstly, send results to the replication group leader.
+    if (comm_replication.isCoordinator()) {
+        // Add process's own matrix to the result.
+        matrices.push_back(std::move(matrixC));
+        // Receive matrix results from other processes.
+        for (int p = 1; p < comm_replication.numProcesses(); p++) {
+            auto matrix = comm_replication.ReceiveDense(p, PHASE_FINAL);
+            matrices.push_back(std::move(matrix));
+        }
+    } else {
+        // If we aren't the coordinator in the replication group - just send the results and exit.
+        // There is nothing more to do.
+        comm_replication.SendDense(matrixC.get(), comm_replication.rankCoordinator(), PHASE_FINAL);
+        return;
+    }
+
+    // Merge results received from replication groups.
+    auto replication_result = matrix::Merge(std::move(matrices));
+    // Free memory / prepare vector for next pushes. (Solely for reader's clarity - look up move above.)
+    matrices.clear();
+
+    // Secondly, send results to the global coordinator.
+    if (communicator->isCoordinator()) {
+        // Coordinator shouldn't send his own part to himself.
+        // Therefore we just push the part to our result vector.
+        matrices.push_back(std::move(replication_result));
+        // Coordinator: receive parts from every other process.
+        for (int i = c; i < communicator->numProcesses(); i += c) {
+            auto m = communicator->ReceiveDense(i, PHASE_FINAL);
+            matrices.push_back(std::move(m));
+        }
+        // Coordinator: all parts where received.
+        // Coordinator: print out the Matrix.
+        auto final_result = matrix::Merge(std::move(matrices));
+        std::cout << *final_result << std::endl;
+    } else {
+        // Not a coordinator: send managed part to the coordinator.
+        communicator->SendDense(replication_result.get(), communicator->rankCoordinator(), PHASE_FINAL);
+    }
 }
 
 }

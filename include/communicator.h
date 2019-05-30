@@ -34,10 +34,11 @@ public:
 
     void SendDense(matrix::Dense *m, int receiver, int phase);
     std::unique_ptr<matrix::Dense> ReceiveDense(int sender, int phase);
+    void BroadcastSendDense(matrix::Dense *m);
+    std::unique_ptr<matrix::Dense> BroadcastReceiveDense(int root);
 
     void SendSparse(matrix::Sparse *m, int receiver, int phase);
     std::unique_ptr<matrix::Sparse> ReceiveSparse(int sender, int phase);
-
     void BroadcastSendSparse(matrix::Sparse *m);
     std::unique_ptr<matrix::Sparse> BroadcastReceiveSparse(int root);
 };

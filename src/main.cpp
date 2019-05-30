@@ -4,6 +4,13 @@
 #include "matrix.h"
 #include "communicator.h"
 
+/*
+ * TODO: Things that are left to implement (WIP).
+ * 2. Implement proper matrices multiplication for Inner Column ABC algorithm.
+ * 3. Implement support for input data that p % c != 0.
+ * 4. Implement support for MKL matrix multiplication.
+ * 5. Conduct performance tests (maybe tweak some things).
+ */
 
 int main(int argc, char **argv) {
     // Initialize communication between processes.
@@ -14,12 +21,9 @@ int main(int argc, char **argv) {
     std::unique_ptr<matrix::Sparse> matrix_sparse;
     if (communicator.isCoordinator()) {
         matrix_sparse = parser::parse_sparse_matrix(arg.sparse_matrix_file);
-        if (matrix_sparse->n % arg.replication_group_size != 0) {
-            throw std::invalid_argument("n % c != 0");
-        }
     }
 
-    // Run algorithm.
+    // 1. Initialize algorithm and data (with distribution).
     std::unique_ptr<matrixmul::Algorithm> algorithm;
     switch (arg.algorithm) {
         case matrixmul::Algorithms::COLA:
@@ -27,7 +31,8 @@ int main(int argc, char **argv) {
                 arg.replication_group_size, arg.seed);
             break;
         case matrixmul::Algorithms::COLABC:
-            algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator, arg.seed);
+            algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator,
+                arg.replication_group_size, arg.seed);
             break;
     }
 
@@ -38,15 +43,12 @@ int main(int argc, char **argv) {
     // 3. Computation.
     algorithm->phaseComputation(arg.exponent);
 
-    // Final phase of gathering results from the workers.
+    // 4. Final phase of gathering results from the workers.
     if (arg.ge_value > 0) {
         algorithm->phaseFinalGE(arg.ge_value);
     } else if (arg.print_the_matrix_c) {
         algorithm->phaseFinalMatrix();
     }
-
-    // Write two versions of your program. In a basic version, do not use any libraries for local (inside a process)
-    // matrix multiplication. In a second version, use MKL for local matrix multiplication.
 
     return 0;
 }

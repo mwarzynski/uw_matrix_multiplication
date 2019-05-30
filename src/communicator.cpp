@@ -77,6 +77,20 @@ std::unique_ptr<matrix::Dense> Communicator::ReceiveDense(int sender, int phase)
     return std::make_unique<matrix::Dense>(meta[0], meta[1], meta[2], meta[3], std::move(values));
 }
 
+void Communicator::BroadcastSendDense(matrix::Dense *m) {
+    int meta[5] = {m->rows, m->column_base, m->columns, m->columns_total, static_cast<int>(m->values.size())};
+    MPI_Bcast(&meta[0], 5, MPI_INT, _rank, _comm);
+    MPI_Bcast(m->values.data(), m->values.size(), MPI_DOUBLE, _rank, _comm);
+}
+
+std::unique_ptr<matrix::Dense> Communicator::BroadcastReceiveDense(int root) {
+    int meta[5];
+    MPI_Bcast(&meta[0], 5, MPI_INT, root, _comm);
+    std::vector<double> values(meta[4]);
+    MPI_Bcast(values.data(), values.size(), MPI_DOUBLE, root, _comm);
+    return std::make_unique<matrix::Dense>(meta[0], meta[1], meta[2], meta[3], std::move(values));
+}
+
 void Communicator::SendSparse(matrix::Sparse *m, int receiver, int phase) {
     int meta[3] = {static_cast<int>(m->values.size()), static_cast<int>(m->rows_number_of_values.size()), m->n};
     MPI_Send(&meta[0], 3, MPI_INT, receiver, phase, _comm);
@@ -97,7 +111,6 @@ std::unique_ptr<matrix::Sparse> Communicator::ReceiveSparse(int sender, int phas
     return std::make_unique<matrix::Sparse>(meta[2], std::move(values), std::move(rows_number_of_values),
         std::move(values_column));
 }
-
 
 void Communicator::BroadcastSendSparse(matrix::Sparse *m) {
     int meta[3] = {static_cast<int>(m->values.size()), static_cast<int>(m->rows_number_of_values.size()), m->n};

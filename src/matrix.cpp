@@ -44,8 +44,18 @@ Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
 Dense::Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values) : rows{rows},
     column_base{column_base}, columns{columns}, columns_total{columns_total}, values{values} {}
 
+Dense::Dense(int n, std::pair<int, int> column_range) : rows{n}, columns_total{n} {
+    column_base = column_range.first;
+    columns = column_range.second - column_range.first;
+    int size = columns * rows;
+    if (size < 0) {
+        size = 0;
+    }
+    values.resize(size);
+}
+
 std::pair<int, int> Dense::ColumnRange() {
-    return std::make_pair(column_base, column_base + columns - 1);
+    return std::make_pair(column_base, column_base + columns);
 }
 
 size_t Dense::valuesIndex(int x, int y) {
@@ -68,6 +78,40 @@ void Dense::ItemAdd(int x, int y, double value) {
     Set(x, y, Get(x, y) + value);
 }
 
+std::unique_ptr<Dense> MergeSame(Denses &&ds) {
+    if (ds.empty()) {
+        return nullptr;
+    }
+    if (ds.size() == 1) {
+        return std::move(ds[0]);
+    }
+
+    int n = ds[0]->rows;
+    int column_base = ds[0]->column_base;
+    int columns = ds[0]->columns;
+    for (size_t i = 0; i < ds.size() - 1; i++) {
+        assert(ds[i+1]->column_base == ds[i]->column_base);
+        assert(ds[i+1]->columns == ds[i]->columns);
+    }
+    size_t values_size = columns * n;
+    std::vector<double> values;
+    assert(values_size < values.max_size());
+    values.resize(values_size);
+
+    for (int r = 0; r < n; r++) {
+        size_t it = (r * columns);
+        for (int j = 0; j < columns; j++) {
+            for (const auto &m : ds) {
+                if (m->values[it + j] == 0)
+                    continue;
+                values[it + j] = m->values[it + j];
+            }
+        }
+    }
+
+    return std::make_unique<Dense>(n, column_base, columns, n, std::move(values));
+}
+
 std::unique_ptr<Dense> Merge(Denses &&ds) {
     if (ds.empty()) {
         return nullptr;
@@ -75,18 +119,25 @@ std::unique_ptr<Dense> Merge(Denses &&ds) {
     if (ds.size() == 1) {
         return std::move(ds[0]);
     }
+
+    if (ds[0]->column_base == ds[1]->column_base) {
+        return MergeSame(std::move(ds));
+    }
+
     // Prepare meta information.
     int n = ds[0]->rows;
     int column_base = ds[0]->column_base;
     for (size_t i = 0; i < ds.size() - 1; i++) {
+        if (ds[i+1]->column_base != ds[i]->column_base + ds[i]->columns) {
+            std::cout << ds[i+1]->column_base << " " << ds[i]->column_base << " " << ds[i]->columns << std::endl;
+        }
         assert(ds[i+1]->column_base == ds[i]->column_base + ds[i]->columns);
     }
     int columns = 0;
-    size_t values_size = 0;
     for (const auto &m : ds) {
         columns += m->columns;
-        values_size += m->values.size();
     }
+    size_t values_size = columns * n;
     // Copy item values.
     std::vector<double> values;
     assert(values_size < values.max_size());
@@ -168,18 +219,6 @@ std::vector<Sparse> Sparse::Split(int processes, bool split_by_column) {
         matrices.push_back(m);
     }
     return matrices;
-}
-
-std::pair<int, int> Sparse::ColumnRange() {
-    int min = n;
-    int max = 0;
-    for (const int &c : values_column) {
-        if (c < min)
-            min = c;
-        if (c > max)
-            max = c;
-    }
-    return {min, max};
 }
 
 std::ostream &operator<<(std::ostream &os, const Sparse &m) {
