@@ -1,12 +1,10 @@
 #include <memory>
-#include <mpi.h>
 #include "parser.h"
 #include "matrix.h"
 #include "communicator.h"
 
 /*
  * TODO: Things that are left to implement (WIP).
- * 2. Implement proper matrices multiplication for Inner Column ABC algorithm.
  * 3. Implement support for input data that p % c != 0.
  * 4. Implement support for MKL matrix multiplication.
  * 5. Conduct performance tests (maybe tweak some things).
