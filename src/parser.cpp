@@ -33,22 +33,22 @@ Arguments::Arguments(int argc, char **argv) {
                 this->mkl = true;
                 break;
             case '?':
-                throw std::invalid_argument(std::string(1, optopt));
+                throw std::runtime_error(std::string(1, optopt));
             default:
                 throw std::runtime_error("Parsing arguments.");
         }
     }
     if (this->sparse_matrix_file.empty()) {
-        throw std::invalid_argument("-f (sparse_matrix_file) is required.");
+        throw std::runtime_error("-f (sparse_matrix_file) is required.");
     }
     if (this->seed <= 0) {
-        throw std::invalid_argument("-s (seed_for_dense_matrix) is required and must be > 0.");
+        throw std::runtime_error("-s (seed_for_dense_matrix) is required and must be > 0.");
     }
     if (this->replication_group_size <= 0) {
-        throw std::invalid_argument("-c (replication_group_size) is required and must be > 0.");
+        throw std::runtime_error("-c (replication_group_size) is required and must be > 0.");
     }
-    if (this->exponent <= 0) {
-        throw std::invalid_argument("-e (exponent) is required and must be > 0.");
+    if (this->exponent < 0) {
+        throw std::runtime_error("-e (exponent) is required and must be >= 0.");
     }
 }
 

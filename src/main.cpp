@@ -10,7 +10,7 @@
  * 5. Conduct performance tests (maybe tweak some things).
  */
 
-int main(int argc, char **argv) {
+int run_app(int argc, char **argv) {
     // Initialize communication between processes.
     auto communicator = messaging::Communicator(argc, argv);
     // Parse command line arguments.
@@ -49,4 +49,13 @@ int main(int argc, char **argv) {
     }
 
     return 0;
+}
+
+int main(int argc, char **argv) {
+    try {
+        return run_app(argc, argv);
+    } catch (std::runtime_error &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+    return 1;
 }

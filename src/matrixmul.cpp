@@ -34,7 +34,7 @@ Algorithm::Algorithm(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Com
     matrixC = std::make_unique<matrix::Dense>(n, communicator->rank(), communicator->numProcesses());
 
     if (communicator->numProcesses() % replication_factor != 0) {
-        throw std::invalid_argument("p % c != 0");
+        throw std::runtime_error("p % c != 0");
     }
 
     // TODO: Get rid of n % c == 0 requirement. Possibly append Matrix with zeroes.
@@ -188,7 +188,7 @@ AlgorithmCOLABC::AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, me
                                  int replication_factor, int seed) :
                                  Algorithm(std::move(full_matrix), com, replication_factor, seed, false) {
     if (communicator->numProcesses() % (replication_factor*replication_factor) != 0) {
-        throw std::invalid_argument("p % c^2 != 0");
+        throw std::runtime_error("p % c^2 != 0");
     }
 }
 
