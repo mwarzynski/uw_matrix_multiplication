@@ -23,6 +23,7 @@ enum Algorithms {
 
 class Algorithm {
 public:
+    int n_original;
     int n;
     int c;
 

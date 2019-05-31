@@ -12,6 +12,7 @@ namespace matrix {
 
 class Dense {
 public:
+    int n_original;
     // MatrixDense contains a given number of full columns.
     int rows;           // Number of rows in the Matrix (=n).
     int column_base;    // First column saved in the Matrix.
@@ -20,13 +21,13 @@ public:
     std::vector<double> values;
 
     // Creates new Dense matrix filled with random values.
-    Dense(int n, int part, int parts_total, int seed);
+    Dense(int n, int n_original, int part, int parts_total, int seed);
     // Creates new Dense matrix filled with zeroes.
-    Dense(int n, int part, int parts_total);
+    Dense(int n, int n_original, int part, int parts_total);
     // Creates new Dense matrix based on provided values.
-    Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values);
+    Dense(int n, int n_original, int column_base, int columns, int columns_total, std::vector<double> &&values);
     // Creates new Dense matrix within provided column range filled with zeroes.
-    Dense(int n, std::pair<int, int> column_range);
+    Dense(int n, int n_original, std::pair<int, int> column_range);
 
     std::pair<int, int> ColumnRange();
     double Get(int x, int y);

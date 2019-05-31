@@ -18,7 +18,8 @@ int block_column_base(int width, int *block_width, int part) {
     return column_base;
 }
 
-Dense::Dense(int n, int part, int parts_total, int seed) : rows{n}, columns_total{n} {
+Dense::Dense(int n, int n_original, int part, int parts_total, int seed) : n_original{n_original}, rows{n},
+    columns_total{n} {
     columns = block_column_size(n, parts_total);
     column_base = block_column_base(n, &columns, part);
     for (int r = 0; r < n; r++) {
@@ -28,7 +29,7 @@ Dense::Dense(int n, int part, int parts_total, int seed) : rows{n}, columns_tota
     }
 }
 
-Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
+Dense::Dense(int n, int n_original, int part, int parts_total) : n_original{n_original}, rows{n}, columns_total{n} {
     columns = block_column_size(n, parts_total);
     column_base = block_column_base(n, &columns, part);
     if (columns < 0) {
@@ -41,10 +42,11 @@ Dense::Dense(int n, int part, int parts_total) : rows{n}, columns_total{n} {
     values.resize(columns * n);
 }
 
-Dense::Dense(int rows, int column_base, int columns, int columns_total, std::vector<double> &&values) : rows{rows},
-    column_base{column_base}, columns{columns}, columns_total{columns_total}, values{values} {}
+Dense::Dense(int n, int n_original, int column_base, int columns, int columns_total, std::vector<double> &&values) :
+    n_original{n_original}, rows{n}, column_base{column_base}, columns{columns}, columns_total{columns_total},
+    values{values} {}
 
-Dense::Dense(int n, std::pair<int, int> column_range) : rows{n}, columns_total{n} {
+Dense::Dense(int n, int n_original, std::pair<int, int> column_range) : n_original{n_original}, rows{n}, columns_total{n} {
     column_base = column_range.first;
     columns = column_range.second - column_range.first;
     int size = columns * rows;
@@ -109,7 +111,7 @@ std::unique_ptr<Dense> MergeSame(Denses &&ds) {
         }
     }
 
-    return std::make_unique<Dense>(n, column_base, columns, n, std::move(values));
+    return std::make_unique<Dense>(n, ds[0]->n_original, column_base, columns, n, std::move(values));
 }
 
 std::unique_ptr<Dense> Merge(Denses &&ds) {
@@ -154,15 +156,19 @@ std::unique_ptr<Dense> Merge(Denses &&ds) {
     }
 
     // Create unique pointer to the newly created Matrix.
-    return std::make_unique<Dense>(n, column_base, columns, n, std::move(values));
+    return std::make_unique<Dense>(n, ds[0]->n_original, column_base, columns, n, std::move(values));
 }
 
 std::ostream &operator<<(std::ostream &os, const Dense &m) {
     std::cout.precision(5);
     int i = 0;
-    for (int r = 0; r < m.rows; r++) {
+    for (int r = 0; r < m.n_original; r++) {
         for (int c = 0; c < m.columns_total; c++) {
             if (m.column_base <= c && c < m.column_base + m.columns) {
+                if (c >= m.n_original) {
+                    i++;
+                    continue;
+                }
                 os << m.values[i++];
             } else {
                 os << "0.000";

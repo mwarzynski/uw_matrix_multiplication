@@ -29,17 +29,17 @@ Algorithm::Algorithm(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Com
         n = communicator->BroadcastReceiveN();
         matrixA = communicator->ReceiveSparse(communicator->rankCoordinator(), PHASE_INITIALIZATION);
     }
+    n_original = n;
+    // Determine if we should expand n due to layers.
+    if (n % replication_factor != 0) {
+        n = ((n / replication_factor) + 1) * replication_factor;
+    }
     // Prepare Matrix B and C.
-    matrixB = std::make_unique<matrix::Dense>(n, communicator->rank(), communicator->numProcesses(), seed);
-    matrixC = std::make_unique<matrix::Dense>(n, communicator->rank(), communicator->numProcesses());
+    matrixB = std::make_unique<matrix::Dense>(n, n_original, communicator->rank(), communicator->numProcesses(), seed);
+    matrixC = std::make_unique<matrix::Dense>(n, n_original, communicator->rank(), communicator->numProcesses());
 
     if (communicator->numProcesses() % replication_factor != 0) {
         throw std::runtime_error("p % c != 0");
-    }
-
-    // TODO: Get rid of n % c == 0 requirement. Possibly append Matrix with zeroes.
-    if (n % replication_factor != 0) {
-        throw std::runtime_error("n % c != 0");
     }
 }
 
@@ -121,7 +121,8 @@ void AlgorithmCOLA::phaseFinalMatrix() {
         // Coordinator: all parts where received.
         // Coordinator: print out the Matrix.
         auto final_result = matrix::Merge(std::move(matrices));
-        std::cout << *final_result << std::endl;
+        std::cout << final_result->n_original << " " << final_result->n_original << std::endl;
+        std::cout << *final_result;
     } else {
         // Not a coordinator: send managed part to the coordinator.
         communicator->SendDense(replication_result.get(), communicator->rankCoordinator(), PHASE_FINAL);
@@ -220,7 +221,7 @@ void AlgorithmCOLABC::phaseReplication() {
         }
     }
     matrixB = matrix::Merge(std::move(matrices_b));
-    matrixC = std::make_unique<matrix::Dense>(matrixB->rows, matrixB->ColumnRange());
+    matrixC = std::make_unique<matrix::Dense>(matrixB->rows, n_original, matrixB->ColumnRange());
 }
 
 void AlgorithmCOLABC::phaseComputation(int power) {
@@ -279,7 +280,8 @@ void AlgorithmCOLABC::phaseFinalMatrix() {
         // Coordinator: all parts where received.
         // Coordinator: print out the Matrix.
         auto final_result = matrix::Merge(std::move(matrices));
-        std::cout << *final_result << std::endl;
+        std::cout << final_result->n_original << " " << final_result->n_original << std::endl;
+        std::cout << *final_result;
     } else {
         // Not a coordinator: send managed part to the coordinator.
         communicator->SendDense(replication_result.get(), communicator->rankCoordinator(), PHASE_FINAL);
