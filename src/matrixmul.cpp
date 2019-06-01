@@ -85,9 +85,19 @@ void Algorithm::phaseComputationCycleA(messaging::Communicator *comm) {
 void Algorithm::phaseFinalGE(double g) {
     // Count how many values greater or equal to `g` is in the part of the result.
     long counter = 0;
-    for (const auto &v : matrixC->values) {
-        if (v >= g)
-            counter++;
+    int i = 0;
+    for (int row = 0; row < matrixC->n_original; row++) {
+        for (int col = 0; col < matrixC->columns_total; col++) {
+            if (matrixC->column_base <= col && col < matrixC->column_base + matrixC->columns) {
+                if (col >= matrixC->n_original) {
+                    i++;
+                    continue;
+                }
+                if (matrixC->values[i++] >= g) {
+                    counter += 1;
+                }
+            }
+        }
     }
     // Send the counters to coordinator and print out the results.
     if (communicator->isCoordinator()) {
