@@ -236,7 +236,7 @@ void AlgorithmInnerABC::phaseReplication() {
 
 void AlgorithmInnerABC::phaseComputation(int power) {
     auto comm_replication_a = communicator->Split(communicator->rank() % c);
-    int rounds = communicator->numProcesses() / c*c;
+    int rounds = communicator->numProcesses() / (c*c);
     for (int i = 0; i < power; i++) {
         for (int j = 0; j < rounds; j++) {
             phaseComputationPartial();
