@@ -130,13 +130,19 @@ std::unique_ptr<Dense> Merge(Denses &&ds) {
     int n = ds[0]->rows;
     int column_base = ds[0]->column_base;
     for (size_t i = 0; i < ds.size() - 1; i++) {
+        if (ds[i]->columns <= 0 || ds[i+1]->column_base >= ds[i]->n_original) {
+            continue;
+        }
         if (ds[i+1]->column_base != ds[i]->column_base + ds[i]->columns) {
-            std::cout << ds[i+1]->column_base << " " << ds[i]->column_base << " " << ds[i]->columns << std::endl;
+            std::cerr << ds[i+1]->column_base << " " << ds[i]->column_base << " " << ds[i]->columns << std::endl;
         }
         assert(ds[i+1]->column_base == ds[i]->column_base + ds[i]->columns);
     }
     int columns = 0;
     for (const auto &m : ds) {
+        if (m->columns < 0) {
+            continue;
+        }
         columns += m->columns;
     }
     size_t values_size = columns * n;

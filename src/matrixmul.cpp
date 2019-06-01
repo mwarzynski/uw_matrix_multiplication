@@ -122,7 +122,7 @@ void AlgorithmCOLA::phaseFinalMatrix() {
         // Coordinator: print out the Matrix.
         auto final_result = matrix::Merge(std::move(matrices));
         std::cout << final_result->n_original << " " << final_result->n_original << std::endl;
-        std::cout << *final_result;
+        std::cout << *final_result << std::endl;
     } else {
         // Not a coordinator: send managed part to the coordinator.
         communicator->SendDense(replication_result.get(), communicator->rankCoordinator(), PHASE_FINAL);
@@ -281,7 +281,7 @@ void AlgorithmCOLABC::phaseFinalMatrix() {
         // Coordinator: print out the Matrix.
         auto final_result = matrix::Merge(std::move(matrices));
         std::cout << final_result->n_original << " " << final_result->n_original << std::endl;
-        std::cout << *final_result;
+        std::cout << *final_result << std::endl;
     } else {
         // Not a coordinator: send managed part to the coordinator.
         communicator->SendDense(replication_result.get(), communicator->rankCoordinator(), PHASE_FINAL);

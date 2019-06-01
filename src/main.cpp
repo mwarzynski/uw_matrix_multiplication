@@ -5,12 +5,11 @@
 
 /*
  * TODO: Things that are left to implement (WIP).
- * 3. Implement support for input data that p % c != 0.
  * 4. Implement support for MKL matrix multiplication.
  * 5. Conduct performance tests (maybe tweak some things).
  */
 
-int run_app(int argc, char **argv) {
+int run_matrixmul(int argc, char **argv) {
     // Initialize communication between processes.
     auto communicator = messaging::Communicator(argc, argv);
     // Parse command line arguments.
@@ -53,7 +52,7 @@ int run_app(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     try {
-        return run_app(argc, argv);
+        return run_matrixmul(argc, argv);
     } catch (std::runtime_error &e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
