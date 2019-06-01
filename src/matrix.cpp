@@ -24,7 +24,10 @@ Dense::Dense(int n, int n_original, int part, int parts_total, int seed) : n_ori
     column_base = block_column_base(n, &columns, part);
     for (int r = 0; r < n; r++) {
         for (int c = 0; c < columns; c++) {
-            values.push_back(generate_double(seed, r, column_base + c));
+            if (c >= n_original)
+                values.push_back(0);
+            else
+                values.push_back(generate_double(seed, r, column_base + c));
         }
     }
 }
