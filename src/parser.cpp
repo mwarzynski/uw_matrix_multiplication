@@ -60,8 +60,8 @@ std::unique_ptr<matrix::Sparse> parse_sparse_matrix(const std::string &filename)
 
     std::ifstream f;
     f.open(filename);
-    if (f.fail()) {
-        throw std::system_error(errno, std::system_category());
+    if (!f.is_open()) {
+        throw std::runtime_error("Couldn't open matrix A file.");
     }
 
     try {

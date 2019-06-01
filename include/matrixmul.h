@@ -39,10 +39,10 @@ public:
     virtual void phaseReplication() = 0;
     virtual void phaseComputation(int power) = 0;
     virtual void phaseFinalMatrix() = 0;
+    void phaseFinalGE(double g);
 
     void phaseComputationPartial();
     void phaseComputationCycleA(messaging::Communicator *comm);
-    void phaseFinalGE(double g);
 };
 
 class AlgorithmCOLA : public Algorithm {
@@ -55,9 +55,9 @@ public:
     void phaseFinalMatrix() override;
 };
 
-class AlgorithmCOLABC : public Algorithm {
+class AlgorithmInnerABC : public Algorithm {
 public:
-    AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com, int replication_factor,
+    AlgorithmInnerABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com, int replication_factor,
         int seed);
 
     void phaseReplication() override;

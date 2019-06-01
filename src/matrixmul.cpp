@@ -82,6 +82,26 @@ void Algorithm::phaseComputationCycleA(messaging::Communicator *comm) {
     }
 }
 
+void Algorithm::phaseFinalGE(double g) {
+    // Count how many values greater or equal to `g` is in the part of the result.
+    long counter = 0;
+    for (const auto &v : matrixC->values) {
+        if (v >= g)
+            counter++;
+    }
+    // Send the counters to coordinator and print out the results.
+    if (communicator->isCoordinator()) {
+        // TODO: use MPI Reduce
+        // https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/
+        for (int p = 1; p < communicator->numProcesses(); p++)
+            counter += communicator->ReceiveN(p, PHASE_FINAL);
+        // Print out the result to stdout.
+        std::cout << counter << std::endl;
+    } else {
+        communicator->SendN(counter, communicator->rankCoordinator(), PHASE_FINAL);
+    }
+}
+
 void AlgorithmCOLA::phaseFinalMatrix() {
     // Divide the processes into replication groups.
     int divider = communicator->rank() / c;
@@ -129,26 +149,6 @@ void AlgorithmCOLA::phaseFinalMatrix() {
     }
 }
 
-void Algorithm::phaseFinalGE(double g) {
-    // Count how many values greater or equal to `g` is in the part of the result.
-    long counter = 0;
-    for (const auto &v : matrixC->values) {
-        if (v >= g)
-            counter++;
-    }
-    // Send the counters to coordinator and print out the results.
-    if (communicator->isCoordinator()) {
-        // TODO: use MPI Reduce
-        // https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/
-        for (int p = 1; p < communicator->numProcesses(); p++)
-            counter += communicator->ReceiveN(p, PHASE_FINAL);
-        // Print out the result to stdout.
-        std::cout << counter << std::endl;
-    } else {
-        communicator->SendN(counter, communicator->rankCoordinator(), PHASE_FINAL);
-    }
-}
-
 AlgorithmCOLA::AlgorithmCOLA(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
     int replication_factor, int seed) : Algorithm(std::move(full_matrix), com, replication_factor, seed, true) { }
 
@@ -185,7 +185,7 @@ void AlgorithmCOLA::phaseComputation(int power) {
     matrixC = std::move(matrixB);
 }
 
-AlgorithmCOLABC::AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
+AlgorithmInnerABC::AlgorithmInnerABC(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Communicator *com,
                                  int replication_factor, int seed) :
                                  Algorithm(std::move(full_matrix), com, replication_factor, seed, false) {
     if (communicator->numProcesses() % (replication_factor*replication_factor) != 0) {
@@ -193,7 +193,7 @@ AlgorithmCOLABC::AlgorithmCOLABC(std::unique_ptr<matrix::Sparse> full_matrix, me
     }
 }
 
-void AlgorithmCOLABC::phaseReplication() {
+void AlgorithmInnerABC::phaseReplication() {
     // Replicate A.
     auto matrixA_copy = *matrixA;
     auto divider = group_divider(communicator->rank(), c, communicator->numProcesses());
@@ -224,9 +224,9 @@ void AlgorithmCOLABC::phaseReplication() {
     matrixC = std::make_unique<matrix::Dense>(matrixB->rows, n_original, matrixB->ColumnRange());
 }
 
-void AlgorithmCOLABC::phaseComputation(int power) {
+void AlgorithmInnerABC::phaseComputation(int power) {
     auto comm_replication_a = communicator->Split(communicator->rank() % c);
-    int rounds = communicator->numProcesses() / c;
+    int rounds = communicator->numProcesses() / c*c;
     for (int i = 0; i < power; i++) {
         for (int j = 0; j < rounds; j++) {
             phaseComputationPartial();
@@ -241,7 +241,7 @@ void AlgorithmCOLABC::phaseComputation(int power) {
     matrixC = std::move(matrixB);
 }
 
-void AlgorithmCOLABC::phaseFinalMatrix() {
+void AlgorithmInnerABC::phaseFinalMatrix() {
     // Divide the processes into replication groups.
     auto divider = group_divider(communicator->rank(), c, communicator->numProcesses());
     auto comm_replication = communicator->Split(divider.first);

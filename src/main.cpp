@@ -9,7 +9,7 @@
  * 5. Conduct performance tests (maybe tweak some things).
  */
 
-int run_matrixmul(int argc, char **argv) {
+int main(int argc, char **argv) {
     // Initialize communication between processes.
     auto communicator = messaging::Communicator(argc, argv);
     // Parse command line arguments.
@@ -28,7 +28,7 @@ int run_matrixmul(int argc, char **argv) {
                 arg.replication_group_size, arg.seed);
             break;
         case matrixmul::Algorithms::COLABC:
-            algorithm = std::make_unique<matrixmul::AlgorithmCOLABC>(std::move(matrix_sparse), &communicator,
+            algorithm = std::make_unique<matrixmul::AlgorithmInnerABC>(std::move(matrix_sparse), &communicator,
                 arg.replication_group_size, arg.seed);
             break;
     }
@@ -48,13 +48,4 @@ int run_matrixmul(int argc, char **argv) {
     }
 
     return 0;
-}
-
-int main(int argc, char **argv) {
-    try {
-        return run_matrixmul(argc, argv);
-    } catch (std::runtime_error &e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-    return 1;
 }
