@@ -1,5 +1,13 @@
 #include "matrix.h"
 
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 namespace matrix {
 
 int block_column_size(int width, int blocks) {
@@ -189,8 +197,8 @@ std::ostream &operator<<(std::ostream &os, const Dense &m) {
     return os;
 }
 
-Sparse::Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
-               std::vector<int> &&values_column) : n{n}, values{values},
+Sparse::Sparse(int rows, int columns, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
+               std::vector<int> &&values_column) : rows{rows}, columns{columns}, values{values},
                                                     rows_number_of_values{rows_number_of_values},
                                                     values_column{values_column} {}
 
@@ -200,9 +208,9 @@ std::vector<Sparse> Sparse::Split(int processes, bool split_by_column) {
     std::vector<std::vector<int>> m_rows_values(processes);
     std::vector<std::vector<int>> m_value_column(processes);
 
-    int block_width = block_column_size(n, processes);
+    int block_width = block_column_size(rows, processes);
     int it = 0;
-    for (int row = 0; row < n; row++) {
+    for (int row = 0; row < rows; row++) {
         int values_in_row = rows_number_of_values[row + 1] - rows_number_of_values[row];
         for (int i = 0; i < values_in_row; i++) {
             int column = values_column[it];
@@ -230,7 +238,7 @@ std::vector<Sparse> Sparse::Split(int processes, bool split_by_column) {
     std::vector<Sparse> matrices;
     for (int i = 0; i < processes; i++) {
         m_rows_values[i].push_back(m_values[i].size());
-        auto m = Sparse(n, std::move(m_values[i]), std::move(m_rows_values[i]), std::move(m_value_column[i]));
+        auto m = Sparse(rows, block_width, std::move(m_values[i]), std::move(m_rows_values[i]), std::move(m_value_column[i]));
         matrices.push_back(m);
     }
     return matrices;
@@ -238,9 +246,9 @@ std::vector<Sparse> Sparse::Split(int processes, bool split_by_column) {
 
 std::ostream &operator<<(std::ostream &os, const Sparse &m) {
     int n = 0;
-    for (int r = 0; r < m.n; r++) {
+    for (int r = 0; r < m.rows; r++) {
         int values_in_row = m.rows_number_of_values[r+1] - m.rows_number_of_values[r];
-        for (int i = 0; i < m.n; i++) {
+        for (int i = 0; i < m.rows; i++) {
             if (values_in_row > 0 && i == m.values_column[n]) {
                 os << m.values[n++];
                 values_in_row--;
@@ -274,7 +282,7 @@ Sparse::Sparse(Sparse *a, Sparse *b) {
     auto ait = SparseIt(a);
     auto bit = SparseIt(b);
     // Initialize values for the new Sparse matrix.
-    n = a->n;
+    rows = a->rows;
     size_t items = a->values.size() + b->values.size();
     assert(items < values.max_size());
     values.resize(items);
@@ -342,6 +350,166 @@ void SparseIt::update() {
         r++;
     }
     _values_in_row = _m->rows_number_of_values[r+1] - _m->rows_number_of_values[r];
+}
+
+void MKLMultiply(Sparse *matrixA, Dense *matrixB, Dense *matrixC) {
+    assert(matrixA->columns == matrixB->rows);
+    assert(matrixC->rows == matrixA->rows);
+    assert(matrixC->columns == matrixB->columns);
+
+    for (int i = 1; i < 11; i++) {
+        for (int j = 1; j < 11; j++) {
+            for (int k = 1; k < 11; k++) {
+                for (int l = 0; l < 2; l++) {
+                    for (int m = 0; m < 11; m++) {
+                        for (int n = 0; n < 11; n++) {
+
+                            pid_t pid = fork();
+
+                            if (pid == 0) {
+                                int frows = i;
+                                int fcols = j;
+                                int scols = k;
+                                int sldx = l;
+                                int sbeta = m;
+                                int sldy = n;
+
+                                std::cout << i << " " << j << " " << k << " " << l << " " << m << " " << n << std::endl;
+
+                                std::fill(matrixC->values.begin(), matrixC->values.end(), 0);
+
+                                sparse_matrix_t mkl_matrixA;
+                                auto status = mkl_sparse_d_create_csr(
+                                    &mkl_matrixA,                              // matrix A to create
+                                    SPARSE_INDEX_BASE_ZERO,                    // Indicates how input arrays are indexed
+                                    frows,                             // Number of rows of matrix A.
+                                    fcols,                          // Number of columns of matrix A.
+                                    matrixA->rows_number_of_values.data(),     // rows_start, Array of length at least m: rows_start[i] - indexing
+                                    matrixA->rows_number_of_values.data() +
+                                    1, // rows_end, Array of at least length m  : rows_end[i] - indexing - 1
+                                    matrixA->values_column.data(),             // col_indx: for zero-based indexing, array containing the column indices for each non-zero element of the matrix A
+                                    matrixA->values.data());                   // values
+                                if (status != SPARSE_STATUS_SUCCESS) {
+                                    continue;
+                                    throw std::runtime_error("MKLMultiply: couldn't create MKL matrix A");
+                                }
+                                matrix_descr matrixDescrl{SPARSE_MATRIX_TYPE_GENERAL, SPARSE_FILL_MODE_LOWER,
+                                                          SPARSE_DIAG_NON_UNIT};
+
+                                // y := alpha*op(A)*x + beta*y
+                                auto mamam = mkl_sparse_d_mm(
+                                    SPARSE_OPERATION_NON_TRANSPOSE, //
+                                    1,                              // alpha
+                                    mkl_matrixA,                    // A
+                                    matrixDescrl,                   // A desc
+                                    SPARSE_LAYOUT_ROW_MAJOR,        // layout (SPARSE_LAYOUT_COLUMN_MAJOR / SPARSE_LAYOUT_ROW_MAJOR)
+                                    matrixB->values.data(),         // Array of size at least rows*cols.
+                                    scols,               // columns
+                                    sldx,                              // ldx (Specifies the leading dimension of matrix x.)
+                                    sbeta,                              // beta
+                                    matrixC->values.data(),         // Array of size at least rows*cols
+                                    sldy);              // ldy
+                                if (mamam != SPARSE_STATUS_SUCCESS) {
+                                    continue;
+                                    throw std::runtime_error("MKLMultiply: mkl_sparse_d_mm returned error");
+                                }
+
+                                if (abs(matrixC->values[0] - 0.08462937) < 0.01) {
+                                    std::cout << "Almost: " << matrixC->values[0] << std::endl;
+                                    std::cout << *matrixC << std::endl;
+                                    if (abs(matrixC->values[1] - 0.28815718) < 0.01 || abs(matrixC->values[1] - 0.0193612) < 0.01) {
+                                        std::cout << "Almost !!!: " << matrixC->values[1] << std::endl;
+                                        if (matrixC->values[2] != 0) {
+                                            std::cout << *matrixC << std::endl;
+                                            exit(0);
+                                        }
+                                    }
+                                }
+                                exit(1);
+                            } else {
+                                int returnStatus;
+                                waitpid(pid, &returnStatus, 0);  // Parent process waits here for child to terminate.
+
+                                if (returnStatus == 0) {
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    throw std::runtime_error("kurwa");
+}
+
+std::unique_ptr<Sparse> sparseLimitRows(Sparse *matrix, std::pair<int,int> rows_range, int columns) {
+    std::vector<double> a_values;             // Values in the matrix.
+    std::vector<int> a_rows_values; // Separation of values to different rows.
+    std::vector<int> a_values_column;
+    int it = 0;
+    for (int r = 0; r < matrix->rows; r++) {
+        int values_in_row = matrix->rows_number_of_values[r+1] - matrix->rows_number_of_values[r];
+        if (r < rows_range.first || r >= rows_range.second) {
+            continue;
+        }
+        a_rows_values.push_back(it);
+        for (int i = 0; i < values_in_row; i++) {
+            int c = matrix->values_column[it];
+            a_values_column.push_back(c - rows_range.first);
+            a_values.push_back(matrix->values[it++]);
+        }
+    }
+    a_rows_values.push_back(it);
+    if (a_values.empty()) {
+        return nullptr;
+    }
+    return std::make_unique<Sparse>(a_rows_values.size() - 1, columns,
+                                                 std::move(a_values), std::move(a_rows_values), std::move(a_values_column));
+}
+
+std::unique_ptr<Dense> denseLimitRows(Dense *matrix, std::pair<int,int> rows_range) {
+    int rows = rows_range.second - rows_range.first;
+    std::vector<double> values;
+    for (int r = 0; r < matrix->rows; r++) {
+        if (r < rows_range.first)
+            continue;
+        if (r >= rows_range.second)
+            break;
+        for (int c = 0; c < matrix->columns; c++) {
+            values.push_back(matrix->values[r * matrix->columns + c]);
+        }
+    }
+
+    return std::make_unique<Dense>(rows, rows, matrix->column_base, matrix->columns,
+        matrix->columns_total, std::move(values));
+}
+
+void MKLAdjustAndMultiply(Sparse *matrixA, Dense *matrixB, Dense *matrixC) {
+//    auto b_rows_range = std::make_pair(0, matrixB->rows);
+    auto b_column_range = matrixB->ColumnRange();
+
+    // Iterate over Sparse Matrix A and generate new one with the same offset as Matrix B.
+//    auto matrixA_part = sparseLimitRows(matrixA, b_column_range, matrixB->rows);
+    auto dupa = std::make_pair(0, 2);
+    auto matrixB_part = denseLimitRows(matrixB, dupa);
+
+    std::cout << *matrixA << std::endl;
+    std::cout << *matrixB_part << std::endl;
+
+    auto matrixC_part = std::make_unique<Dense>(matrixA->rows, matrixA->rows, std::make_pair(0, matrixB->columns));
+
+    std::cout << *matrixC_part << std::endl;
+
+    // Multiply matrices.
+    MKLMultiply(matrixA, matrixB_part.get(), matrixC_part.get());
+
+    // Apply results to provided Matrix C.
+    for (int r = 0; r < matrixA->columns; r++) {
+        for (int c = 0; c < matrixB->rows; c++) {
+            matrixC->ItemAdd(r, c, matrixC_part->Get(r, c));
+        }
+    }
 }
 
 }

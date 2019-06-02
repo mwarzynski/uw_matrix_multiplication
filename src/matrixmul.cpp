@@ -18,7 +18,7 @@ Algorithm::Algorithm(std::unique_ptr<matrix::Sparse> full_matrix, messaging::Com
     c = replication_factor;
     // Replicate Matrix A over the replication group.
     if (communicator->isCoordinator()) {
-        n = full_matrix->n;
+        n = full_matrix->rows;
         communicator->BroadcastSendN(n);
         auto matricesA = full_matrix->Split(communicator->numProcesses(), split_by_columns);
         matrixA = std::make_unique<matrix::Sparse>(matricesA[0]);

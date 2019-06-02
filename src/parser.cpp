@@ -103,7 +103,7 @@ std::unique_ptr<matrix::Sparse> parse_sparse_matrix(const std::string &filename)
         std::rethrow_exception(std::current_exception());
     }
     f.close();
-    return std::make_unique<matrix::Sparse>(rows, std::move(nonzero_values), std::move(extents_of_rows),
+    return std::make_unique<matrix::Sparse>(rows, rows, std::move(nonzero_values), std::move(extents_of_rows),
         std::move(column_indices));
 }
 

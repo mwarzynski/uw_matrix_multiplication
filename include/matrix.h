@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
+#include <mkl_spblas.h>
 #include "densematgen.h"
 
 
@@ -48,14 +49,15 @@ std::ostream& operator<<(std::ostream &os, const Dense &m);
 
 class Sparse {
 public:
-    int n;
+    int rows;
+    int columns;
 
     std::vector<double> values;             // Values in the matrix.
     std::vector<int> rows_number_of_values; // Separation of values to different rows.
     std::vector<int> values_column;         // Values' column indices.
 
     // Creates new Sparse matrix based on provided values.
-    Sparse(int n, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
+    Sparse(int rows, int columns, std::vector<double> &&values, std::vector<int> &&rows_number_of_values,
                  std::vector<int> &&values_column);
     // Creates new Sparse matrix as a result from merging two provided ones.
     Sparse(Sparse *a, Sparse *b);
@@ -80,6 +82,10 @@ private:
 
     void update();
 };
+
+void MKLMultiply(Sparse *matrixA, Dense *matrixB, Dense *matrixC);
+
+void MKLAdjustAndMultiply(Sparse *matrixA, Dense *matrixB, Dense *matrixC);
 
 }
 
