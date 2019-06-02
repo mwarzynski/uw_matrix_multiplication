@@ -3,11 +3,6 @@
 #include "matrix.h"
 #include "communicator.h"
 
-/*
- * TODO: Things that are left to implement (WIP).
- * 4. Implement support for MKL matrix multiplication.
- * 5. Conduct performance tests (maybe tweak some things).
- */
 
 int main(int argc, char **argv) {
     // Initialize communication between processes.
