@@ -77,8 +77,6 @@ private:
     int i = -1;
     int r = -1;
     int _values_in_row = 0;
-
-    void update();
 };
 
 }

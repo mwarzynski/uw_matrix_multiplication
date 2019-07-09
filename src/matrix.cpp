@@ -258,10 +258,10 @@ std::ostream &operator<<(std::ostream &os, const Sparse &m) {
 // It returns True if value of the first one is before the second one.
 // Firstly compares X and Y. It also checks if iterator is EOF (value==0).
 bool sitCmp(std::tuple<int,int,double> a, std::tuple<int,int,double> b) {
-    if (std::get<2>(a) == 0) {
+    if (std::get<0>(a) == -1) {
         return false;
     }
-    if (std::get<2>(b) == 0 || std::get<0>(a) < std::get<0>(b)) {
+    if (std::get<0>(b) == -1 || std::get<0>(a) < std::get<0>(b)) {
         return true;
     } else if (std::get<0>(a) == std::get<0>(b)) {
         return std::get<1>(a) < std::get<1>(b);
@@ -300,6 +300,7 @@ Sparse::Sparse(Sparse *a, Sparse *b) {
             v = bv;
             bit.Next();
         }
+        assert(std::get<0>(v) != -1);
         // Add value to the new Matrix.
         r = std::get<0>(v); c = std::get<1>(v);
         values[i] = std::get<double>(v);
@@ -327,21 +328,18 @@ std::tuple<int,int,double> SparseIt::Value() {
 }
 
 bool SparseIt::Next() {
-    if (++i >= static_cast<int>(_m->values.size())) {
+    i++;
+    if (i >= static_cast<int>(_m->values.size())) {
         return false;
     }
     if (--_values_in_row <= 0) {
         r++;
-        update();
+        while (_m->rows_number_of_values[r+1] - _m->rows_number_of_values[r] == 0) {
+            r++;
+        }
+        _values_in_row = _m->rows_number_of_values[r+1] - _m->rows_number_of_values[r];
     }
     return true;
-}
-
-void SparseIt::update() {
-    while (_m->rows_number_of_values[r+1] - _m->rows_number_of_values[r] == 0) {
-        r++;
-    }
-    _values_in_row = _m->rows_number_of_values[r+1] - _m->rows_number_of_values[r];
 }
 
 }

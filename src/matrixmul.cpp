@@ -51,12 +51,11 @@ void Algorithm::phaseComputationPartial() {
 
         int ay = std::get<0>(itv);
         int ax = std::get<1>(itv);
-
-        assert(ax != -1);
-        assert(ay != -1);
+        if (ax == -1 || ay == -1) {
+            continue;
+        }
 
         double av = std::get<2>(itv);
-        assert(av != 0);
 
         for (int bx = b_range.first; bx < b_range.second; bx++) {
             double bv = matrixB->Get(bx, ax);
