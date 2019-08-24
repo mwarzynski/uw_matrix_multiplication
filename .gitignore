@@ -2,3 +2,4 @@
 cmake-build-debug
 build
 tests_daniel
+performance_tests
