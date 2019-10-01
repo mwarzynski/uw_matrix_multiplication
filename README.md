@@ -53,7 +53,15 @@ Please send us a single `.zip` file containing a single directory with your logi
  - correct MPI implementation of the Inner algorithm: 6 points; 
  - correct MPI implementation of the Column algorithm: 6 points; 
  - report: 4 points (incorrect implementations do not get these points); 
- - performance: 9 points (incorrect implementations do not get these points). We will score correctness on our test data; we take into account the floating point errors. If your solution passes most of the tests, but fails on some, we will contact you and you will be able to submit a patched version. We will use Okeanos for performance testing. To optimize performance, consider using advanced MPI operations, like asynchronous messages, collectives, custom datatypes, custom communicators (hint: for communicating inside a replication group). Remember to test the MKL library. You may also consider using OpenMP. Our performance tests will use `--tasks-per-node 24` unless you write in your report that your solution is more efficient with other value (e.g., you use MPI+OpenMP and you just need `--tasks-per-node 1` or `--tasks-per-node 2`). Please do submit your assignment by the due date. If you're late, your score will be reduced by 1 point for every 12 hours (i.e.: if you're late by 2h, we subtract 1 point from your score; if you're late by 25h, we subtract 3 points). There is a second due date - 13th June. Submitting by this due date is very risky. First, very good solutions submitted by this due date receive minimum passing score (i.e.: at most 10 points). Second, there will be less time for patching. Please do submit your assignment by the normal, first due date.
+ - performance: 9 points (incorrect implementations do not get these points).
+
+We will score correctness on our test data; we take into account the floating point errors. If your solution passes most of the tests, but fails on some, we will contact you and you will be able to submit a patched version.  We will use Okeanos for performance testing.
+
+To optimize performance, consider using advanced MPI operations, like asynchronous messages, collectives, custom datatypes, custom communicators (hint: for communicating inside a replication group).
+
+Remember to test the MKL library. You may also consider using OpenMP.
+
+Our performance tests will use `--tasks-per-node 24` unless you write in your report that your solution is more efficient with other value (e.g., you use MPI+OpenMP and you just need `--tasks-per-node 1` or `--tasks-per-node 2`).
 
 ## Additional materials
 
