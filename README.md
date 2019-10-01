@@ -10,6 +10,8 @@ As in a typical supercomputer communication takes orders of magnitude more time 
 Your goal is to implement two parallel algorithms for multiplying a sparse matrix A by a dense matrix B:
  - 1.5D Blocked Column A,
  - 1.5D Blocked Inner ABC
+
+![Matrix Multiplication Illustration](images/matrix_multiplication.png)
 See the paper (website) for further details.
 
 The main idea of both algorithms is to replicate (redundantly) the data, and then to do less communication rounds, than if the data were not replicated.
