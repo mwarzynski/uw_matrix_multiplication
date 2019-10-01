@@ -44,10 +44,6 @@ Your program will be run using the following instructions:
  - `-g ge_value` prints the number of elements in C greater than or equal to the `ge_value`. 
  - `-m` turns on MKL for in-process sparse-dense matrix multiplication (it's off by default). Do not print anything other than the matrix C (if `-v` is used) or a single integer (if `-g` is used) on stdout.
 
-## Solution content
-
-Please send us a single `.zip` file containing a single directory with your login (`ab123456`); the directory has at least the following files: * `densematgen.h`: our generator. This file cannot be modified. * `densematgen.cpp`: our generator. This file cannot be modified. For tests, we might use a different implementation of the generator (but it will be stateless); * `report.pdf`: a report describing your implementation. Estimate the numerical intensity of the problem (as in the roofline model). Describe the optimizations you implemented. Show weak and strong scaling results. For scaling, find instances and input parameters so that the measurements are realistic, but the (wall clock) run time does not exceed 3 minutes when more than 4 nodes are used.
-
 ## Scoring
 
  - correct MPI implementation of the Inner algorithm: 6 points; 
