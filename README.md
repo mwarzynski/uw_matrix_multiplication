@@ -1,6 +1,8 @@
 # Communication-Avoiding Parallel Sparse-Dense Matrix Multiplication
 The MPI Programming Assignment.
 
+Project was executed on Cray XC40 supercomputer called **Okeanos** (https://kdm.icm.edu.pl/kdm/Okeanos/en). It is composed of 1084 computing nodes. Each of the node has 24 Intel Xeon CPU cores (x86_64 architecture, code name *Haswell*) with a 2-way Hyper Threading. Nodes are connected with a Cray Aries Network, with a Dragonfly topology.
+
 ## Introduction
 
 As in a typical supercomputer communication takes orders of magnitude more time than computation, there is a growing new field in high-performance algorithms: communication-avoidance. These algorithms trade communication for redundant computation or increased memory usage.
